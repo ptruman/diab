@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ $DIAB_ENABLE_ADVANCED_LOGGING=1 ]; then
+if [ $DIAB_ENABLE_ADVANCED_LOGGING -eq 1 ]; then
         advlog="-v"
 else
         advlog=""
