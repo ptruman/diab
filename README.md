@@ -169,6 +169,12 @@ To ensure *diab* sees the correct external IP of a client, you may need to updat
 You will then need to restart Traefik, via `docker restart traefik`<br/>
 *diab* is already configured to handle X-Forwarded-For headers, but it will ***only*** function if the above is enabled in Traefik.
 
+## WireGuard client config
+
+If you're already running WireGuard, there is little to change - except you should consider changing the client DNS config to the *diab* macvlan IP address.  That way WireGuard can do a secure lookup of it's server IP (via Private DNS) and then continue using *diab* as a server.
+
+You should note here, however, that (by default) WireGuard runs source NAT (SNAT) - and *diab* will only see the IP of the WireGuard container/host.  However, that IP should (one assumes) be part of the *DIAB_TRUSTED_LANS* environment variables.  If not, you'll need to add the WireGuard host IP to the *DIAB_TRUSTED_LANS* as a /32.
+
 ## Optional piHole config
 
 ### Splitting DNS and DHCP in piHole
