@@ -8,7 +8,7 @@ if [ -f "/etc/dnsdist/dnsdist.conf" ]; then
 else
         mkdir -p /etc/dnsdist
         # Start building the config file...
-        if [ $DIAB_ENABLE_LOGGING=1 ]; then
+        if [ $DIAB_ENABLE_LOGGING -eq 1 ]; then
                 echo "-- Enabling Logging" >> /etc/dnsdist/dnsdist.conf
                 echo "Logging=1" >> /etc/dnsdist/dnsdist.conf
         fi
@@ -18,7 +18,7 @@ else
 addACL('0.0.0.0/0')
 EOF
         # Check for/enable the webserver
-        if [ $DIAB_ENABLE_WEBSERVER=1 ]; then
+        if [ $DIAB_ENABLE_WEBSERVER -eq 1 ]; then
                 if [ $DIAB_WEB_APIKEY ]; then
                         WebAPIKey=$DIAB_WEB_APIKEY
                 else
@@ -29,7 +29,7 @@ EOF
         fi
 
         # Check for/enable base DNS...
-        if [ $DIAB_ENABLE_DNS=1 ]; then
+        if [ $DIAB_ENABLE_DNS -eq 1 ]; then
         cat << EOF >> /etc/dnsdist/dnsdist.conf
 
 -- add normal DNS
@@ -39,7 +39,7 @@ EOF
         fi
 
         # Check for/enable DoT...
-        if [ $DIAB_ENABLE_DOT=1 ]; then
+        if [ $DIAB_ENABLE_DOT -eq 1 ]; then
 cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- path for certs and listen address for DoT ipv4,
 -- by default listens on port 853.
@@ -50,7 +50,7 @@ EOF
         fi
 
         # Check for/enable DOH...
-        if [ $DIAB_ENABLE_DOH=1 ]; then
+        if [ $DIAB_ENABLE_DOH -eq 1 ]; then
 cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- path for certs and listen address for DoH ipv4,
 -- by default listens on port 443.
