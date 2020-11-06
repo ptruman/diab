@@ -9,8 +9,6 @@ This container makes use of:
  - the totally wonderful [dnsdist](https://dnsdist.org) - which provides the DoH, DoT and DNS functionality
  - Some of the authors own scripting ([bash](https://www.gnu.org/software/bash/) and [lua](http://www.lua.org/))
  
- 
-
 ## Why encrypt DNS?
 Normal DNS queries are sent "plaintext" - meaning anyone or anything (person or code) with access to your traffic can see which sites your devices are requesting.  This could happen between your device and your DNS server, or your DNS server and your ISP's server.  Whilst a DNS request may not indicate a subsequent connection to a returned address, it's a fairly good bet that a request would probably be followed up by a connection to that address.
 
@@ -138,11 +136,11 @@ On your router, forward all TCP port 853 traffic to the macvlan LAN IP address o
 
 ## DoH (Port Forward)
 
-### [Without] Traefik (assumes you have no other HTTPS/port 443 services)
+### *Without* Traefik (assumes you have no other HTTPS/port 443 services)
 
-On your router, forward all TCP port 853 traffic to the macvlan LAN IP address of the **container**.
+On your router, forward all TCP port 443 traffic to the macvlan LAN IP address of the **container**.
 
-### [With] Traefik
+### *With* Traefik
 
 On your router, forward all TCP port 443 traffic to the macvlan LAN IP address of your *Traefik* container.  If you have Traefik running, you are probably already doing this anyway.
 
@@ -164,9 +162,9 @@ On your router, forward all TCP port 443 traffic to the macvlan LAN IP address o
 To ensure *diab* sees the correct external IP of a client, you may need to update your Traefik https/websecure entrypoint to allow the use of host header.  Assuming your Traefik configuration is in TOML and your entrypoint is called *websecure* you should update it to look like the following:
 
 `[entryPoints.websecure]`<br/>
-`  address = ":443"`<br/>
-`  [entryPoints.websecure.forwardedHeaders]`<br/>
-`    insecure=true`<br/>
+` address = ":443"`<br/>
+` [entryPoints.websecure.forwardedHeaders]`<br/>
+`  insecure=true`<br/>
     
 You will then need to restart Traefik, via `docker restart traefik`<br/>
 *diab* is already configured to handle X-Forwarded-For headers, but it will ***only*** function if the above is enabled in Traefik.
@@ -218,7 +216,7 @@ Once you are happy with your running configuration, you can copy it out of the c
 
 If you follow the above setup, you should basically be able to envisage the following:
 
-## External client (Request for an ADDRESS from a client [NOT within] *DIAB_TRUSTED_LANS*)
+## External client (Request for an ADDRESS from a client *NOT* within *DIAB_TRUSTED_LANS*)
 
 Mobile Device -> DoT Query 853 -> Your Router -> Port Forward 853 -> *diab* DoT Secure 853 -> PROCESS<br/>
 Mobile Device -> DoH Query 443 -> Your Router -> Port Forward 443 -> Traefik -> *diab* DoT Insecure 8053 -> PROCESS<br/>
@@ -226,9 +224,9 @@ or<br/>
 Mobile Device -> DoH Query 443 -> Your Router -> Port Forward 443 -> *diab* DoH 443 -> PROCESS<br/>
 
 ...where PROCESS = Allow or Reject<br/>
-**NOTE:** Any request for an ADDRESS **[NOT]** within *DIAB_ALLOWED_EXTERNALLY* will be **rejected**.<br/>
+**NOTE:** Any request for an ADDRESS **NOT** within *DIAB_ALLOWED_EXTERNALLY* will be **rejected**.<br/>
 
-## Internal client (Request for an ADDRESS from a client [WITHIN] *DIAB_TRUSTED_LANS*)
+## Internal client (Request for an ADDRESS from a client WITHIN *DIAB_TRUSTED_LANS*)
 
 Device -> DNS Query 53 -> *diab* DNS port 53 -> Allow<br/>
 Device -> DoT Query 853 -> *diab* DoT port 853 -> Allow<br/>
