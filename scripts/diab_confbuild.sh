@@ -49,7 +49,7 @@ EOF
                         if [ -f $DIAB_WEB_APIKEY ]; then
                                 export DIAB_WEB_APIKEY=`echo $DIAB_WEB_PASSWORD | rev`
                                 echo "# DIAB : INFO    : DIAB_ENABLED_WEBSERVER is set, but DIAB_WEB_APIKEY is not."
-                                echo "# DIAB : INFO    : Generated DIAB_WEB_APIKEY as $DIAB_WEB_PASSWORD"
+                                echo "# DIAB : INFO    : Generated DIAB_WEB_APIKEY as $DIAB_WEB_APIKEY"
                         fi
                         echo "webserver(\"0.0.0.0:8083\", \"$DIAB_WEB_PASSWORD\", \"$DIAB_WEB_APIKEY\", {}, \"$DIAB_TRUSTED_LANS\")" >> /etc/dnsdist/dnsdist.conf
                 fi
