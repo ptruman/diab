@@ -26,7 +26,7 @@ else
         echo "\# DIAB : INFO    : Next DNS hop configured as $DIAB_UPSTREAM_NAME ($DIAB_UPSTREAM_IP_AND_PORT)"
         # Start building the config file...
         mkdir -p /etc/dnsdist
-        if [ $DIAB_ENABLE_LOGGING ] then
+        if [ $DIAB_ENABLE_LOGGING ]; then
                 if [ $DIAB_ENABLE_LOGGING -eq 1 ]; then
                         echo "\# DIAB : INFO    : DIAB_ENABLE_LOGGING set. Enabling logging."
                         echo "-- Enabling Logging" >> /etc/dnsdist/dnsdist.conf
@@ -99,8 +99,9 @@ EOF
 addDOHLocal("0.0.0.0", "/ssl/cert.pem", "/ssl/key.pem", "/dns-query", { doTCP=true, reusePort=true, tcpFastOpenSize=64, trustForwardedForHeader=true })
 EOF
                         else
-                                echo "\# DIAB : WARNING : SSL files NOT found - only enabling DoH insecure server on TCP port 8053"
+                                echo "\# DIAB : WARNING : SSL files NOT found - only able to enable DoH insecure server"
                         fi
+                        echo "\# DIAB : INFO    : Enabling DoH insecure server on TCP port 8053"
                         cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- Since the DoH queries are simple HTTPS requests, the server can be hidden behind Nginx or Haproxy.
 -- To allow an HTTPS front end to proxy, we will also listen on port 8053 (insecure)
@@ -162,8 +163,8 @@ EOF
                 done
                 echo >> ./config.conf
         fi
-
         # Check for trusted LANs
+        echo >> /etc/dnsdist.conf
         echo "TrustedLAN=newNMG()" >> /etc/dnsdist/dnsdist.conf
         if [ $DIAB_TRUSTED_LANS ]; then
                 echo "\# DIAB : INFO    : DIAB_TRUSTED_LANS is set"
