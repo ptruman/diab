@@ -105,6 +105,11 @@ addDOHLocal("0.0.0.0:8053", nil, nil, "/dns-query", { reusePort=true, trustForwa
 EOF
                 fi
         fi
+        if [ $DIAB_CHECKINTERVAL ]; then
+                IntervalInsertion=",checkInterval=120"
+        else
+                IntervalInsertion=""
+        fi
         # Add general config and define back end DNS server...
         cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- set X(int) number of queries to be allowed per second from a IP
@@ -124,7 +129,7 @@ setECSSourcePrefixV6(128)
 setMaxTCPConnectionsPerClient(1000)   -- set X(int) for number of tcp connections from a single client. Useful for rate limiting the concurrent connections.
 setMaxTCPQueriesPerConnection(100)    -- set X(int) , similiar to addAction(MaxQPSIPRule(X), DropAction())
 -- Here we define our backend, the pihole dns server
-newServer({address="$DIAB_UPSTREAM_IP_AND_PORT", name="$DIAB_UPSTREAM_NAME", useClientSubnet=true})
+newServer({address="$DIAB_UPSTREAM_IP_AND_PORT",name="$DIAB_UPSTREAM_NAME",useClientSubnet=true$IntervalInsertion})
 EOF
 
         # Declare "connectivitycheck" servers
