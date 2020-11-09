@@ -101,6 +101,7 @@ Over and above that, you can allow then certain addresses on your domain to resp
 
 ## Environment
 
+* **DIAB_CHECKINTERVAL** - Set this to a numberic value in *seconds* (i.e. 120) - where dnsdist will poll for your DIAB_UPSTREAM_IP_AND_PORT (default is 1). This can help reduce downstream log buildup
 * **DIAB_ENABLE_DNS** - Set this to **1** to enable "normal" DNS.  It will run on 0.0.0.0:53
 * **DIAB_ENABLE_DOT** - Set this to **1** to enable DoT. It will run on 0.0.0.0:853 - and **requires** /ssl/cert.pem and /ssl/key.pem to be available via the /ssl bind mount volume above.
 * **DIAB_ENABLE_DOH** - Set this to **1** to enable DoT. It will run on 0.0.0.0:443 - and **requires** /ssl/cert.pem and /ssl/key.pem to be available via the /ssl bind mount volume above.
