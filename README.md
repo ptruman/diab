@@ -189,12 +189,14 @@ If you currently use piHole for DHCP, all your DHCP clients will use piHole for 
 ### Identifying clients
 If you are using piHole *and* have done the above, you *may* find that it only "sees" (or reports) the macvlan IP of the *diab* host when handling queries.  This can skew your stats, and/or stop it's ability to process Groups etc accordingly.
 
-As at 06/11/2020, piHole (dev branch only) supports EDNS, which *diab* is already configured to provide - however you'll need to enable this within piHole.  To do that, you'll need to do something like this:
+*diab* supports clients providing EDNS information - which piHole (FTL 5.3.1 and higher) support.  Please check your piHole FTL version (at the bottom of each piHole admin interface page) - if it's >= 5.3.1, then EDNS is **already** enabled by default.<br/>
+
+If you have an older version, then only the dev branches supports EDNS so you'll need to take some steps to enable this in piHole.  To do that, you'll need to do something like this:
 
 `docker exec -it pihole /bin/bash`<br/>
 `pihole checkout ftl new/edns0`
 
-Assuming your pihole container is called pihole, the above will get you to a pihole container shell and then pull the EDNS branch, which will restart pihole.  From then on, you should find pihole sees the calling client IP that is talking to *diab*, and not the *diab* macvlan IP.
+Assuming your pihole container is called pihole, the above will get you to a pihole container shell and then pull the EDNS branch, which will restart pihole.  From then on, you should find pihole sees the calling client IP that is talking to *diab*, and not the *diab* macvlan IP.  Again, if your FTL version is >= 5.3.1, it should "just work".
 
 # Usage
 
