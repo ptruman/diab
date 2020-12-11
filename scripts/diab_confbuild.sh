@@ -205,6 +205,16 @@ function checkInternal(dq)
 end
 addAction(AllRule(), LuaAction(checkInternal))
 EOF
+        if [ $DIAB_ENABLE_CLI ]; then
+                if [ $DIAB_ENABLE_CLI -eq 1 ]; then
+                        echo "# DIAB : INFO    : Enabling CLI access..."
+                        secureKey=`dnsdist -l 127.0.0.1:999 -e "makeKey()" -C /etc/dnsdist/dnsdist.conf | awk '{split($0,key,"\"");print key[2]}'`
+                        echo "-- Enable CLI access" >> /etc/dnsdist/dnsdist.conf
+                        echo "controlSocket('127.0.0.1:5199')" >> /etc/dnsdist/dnsdist.conf
+                        echo "setKey(\"$secureKey\")" >> /etc/dnsdist/dnsdist.conf
+                fi
+        fi
+        
         echo "# DIAB : INFO    : Startup script complete"
         echo "#"
 fi
