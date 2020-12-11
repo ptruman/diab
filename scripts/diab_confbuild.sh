@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "#"
-echo "# DIAB : INFO    : Starting diab V1.2"
+echo "# DIAB : INFO    : Starting diab V1.3"
 # Check for existing config file...
 if [ -f "/etc/dnsdist/dnsdist.conf" ]; then
         # Config present - do nothing
@@ -129,9 +129,17 @@ setECSSourcePrefixV6(128)
 setMaxTCPConnectionsPerClient(1000)   -- set X(int) for number of tcp connections from a single client. Useful for rate limiting the concurrent connections.
 setMaxTCPQueriesPerConnection(100)    -- set X(int) , similiar to addAction(MaxQPSIPRule(X), DropAction())
 -- Here we define our backend, the pihole dns server
-newServer({address="$DIAB_UPSTREAM_IP_AND_PORT",name="$DIAB_UPSTREAM_NAME",useClientSubnet=true$IntervalInsertion})
 EOF
-
+        
+        Working=`echo $DIAB_UPSTREAM_IP_AND_PORT | sed "s/ //g"`
+        WorkingCount=0
+        for i in $(echo $Working | sed "s/,/ /g"); do
+                echo "# DIAB : INFO    : Adding $i to backend DNS servers (Order=$WorkingCount)"
+                cat << EOF >> /etc/dnsdist/dnsdist.conf
+newServer({address="$DIAB_UPSTREAM_IP_AND_PORT",name="$DIAB_UPSTREAM_NAME",useClientSubnet=true$IntervalInsertion,order=$WorkingCount})
+EOF
+                WorkingCount=`expr $WorkingCount + 1`
+        done
         # Declare "connectivitycheck" servers
         cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- Declare Google Connectivity Check servers...
@@ -204,6 +212,75 @@ function checkInternal(dq)
         end
 end
 addAction(AllRule(), LuaAction(checkInternal))
+
+-- Updated orderedLeastOutstanding function from https://github.com/sysadminblog/dnsdist-configs/blob/master/orderedLeastOutstanding.lua
+function orderedLeastOutstanding(servers, dq)
+
+        -- If there is only one or 0 servers in the table, return it to stop further processing
+        if (#servers == 0 or #servers == 1) then
+                return servers
+        end
+
+        -- Create server list table
+        serverlist = {}
+
+        -- Loop over each server for the pool
+        i = 1
+        while servers[i] do
+                workingname = servers[i].name
+                -- We only care if the server is currently up
+                if (servers[i].upStatus == true) then
+                        -- server shows up (via healthcheck) but may not have been marked down...
+                        -- test for drop flags and reset if required
+                        if (servers[i]:isUp() == true) then
+                                -- server has NOT been marked down....
+
+                                -- test for DROP COUNT here when ready...
+                                -- set drop flags once ready
+
+                                -- Retrieve the order for the server
+                                order = servers[i].order
+
+                                -- Create table for this order if not existing
+                                if type(serverlist[order]) ~= "table" then
+                                        serverlist[order] = {}
+                                end
+
+                                -- Insert this server to the ordered table
+                                table.insert(serverlist[order], servers[i])
+                        else
+                                Log("DNS server "..workingname.." isUp is FALSE (marked DOWN).")
+                        end
+                else
+                        Log("DNS server "..workingname.." upStatus is FALSE (healthcheck failed).")
+                end
+                -- Increment counter for next loop
+                i=i+1
+        end
+
+        -- Get the lowest key in the table so that we use the lowest ordered server(s)
+        for k,v in pairs (serverlist) do
+                if lowest == nil then
+                        lowest = k
+                else
+                        if k < lowest then
+                                lowest = k
+                        end
+                end
+        end
+
+        -- Double check the server list has a value/is defined. I don't think this should
+        -- ever happen, but you can't be too safe. If it has no value, then return the server
+        -- list.
+        if serverlist[lowest] == nil then
+                return leastOutstanding.policy(servers, dq)
+        end
+
+        -- Return the lowest ordered server list to the leastOutstanding function
+        return leastOutstanding.policy(serverlist[lowest], dq)
+end
+setServerPolicyLua("orderedLeastOutstanding", orderedLeastOutstanding)
+
 EOF
         if [ $DIAB_ENABLE_CLI ]; then
                 if [ $DIAB_ENABLE_CLI -eq 1 ]; then
