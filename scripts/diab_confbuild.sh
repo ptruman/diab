@@ -1,7 +1,7 @@
 #!/bin/bash
 # DIAB Configuration Build Script
 # Set Version
-DV="1.3"
+DV="1.4"
 echo "#"
 echo "# DIAB : INFO    : Starting diab V$DV"
 # Check for existing config file...
@@ -27,9 +27,11 @@ else
                 echo "# DIAB : WARNING : DIAB_UPSTREAM_NAME was not set. Using $DIAB_UPSTREAM_IP_AND_PORT"
         fi
         echo "# DIAB : INFO    : Next DNS hop configured as $DIAB_UPSTREAM_NAME ($DIAB_UPSTREAM_IP_AND_PORT)"
-        # Create the config folder if not present...
+        # Create the config folders if not present...
         mkdir -p /etc/dnsdist
-        
+        mkdir -p /etc/routedns
+        echo > /etc/routedns/listeners.toml
+        echo > /etc/routedns/resolvers.toml
         # Start building the config file...
         # Check if Logging has been requested
         if [ $DIAB_ENABLE_LOGGING ]; then
@@ -158,11 +160,69 @@ EOF
         Working=`echo $DIAB_UPSTREAM_IP_AND_PORT | sed "s/ //g"`
         WorkingCount=0
         for i in $(echo $Working | sed "s/,/ /g"); do
-                echo "# DIAB : INFO    : Adding $i to backend DNS servers (Order=$WorkingCount)"
-                cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="$DIAB_UPSTREAM_IP_AND_PORT",name="$DIAB_UPSTREAM_NAME",useClientSubnet=true$IntervalInsertion,order=$WorkingCount})
+                TempCount=`expr $WorkingCount + 1`
+                echo "# DIAB : INFO    : Processing upstream $i (Order=$WorkingCount)"
+                # Grab identifiers...
+                WorkingPrefix=`echo $i | cut -c1-5`
+                WorkingSuffixa=`echo $i | tail -c 3`
+                WorkingSuffixb=`echo $i | tail -c 2`
+                Identified=0
+                UpstreamName=`echo $DIAB_UPSTREAM_NAME | sed "s/,/ /g" | awk '{print $TempCount}'`
+                if [ $WorkingPrefix == "https" ]; then
+                        echo "# DIAB : INFO    : $i appears to be a DoH server"
+                        if [ $Identified -eq 0 ]; then
+                                cat << EOF >> /etc/routedns/resolvers.toml
+[resolvers.routedns$WorkingCount]
+address = "$i"
+protocol = "doh"
+
 EOF
+                                cat << EOF >> /etc/routedns/listeners.toml
+[listeners.routedns$WorkingCount-udp]
+address = ":900$WorkingCount"
+protocol = "udp"
+resolver = routedns$WorkingCount
+
+EOF
+                                cat << EOF >> /etc/dnsdist/dnsdist.conf
+newServer({address="127.0.0.1:900$WorkingCount",name="$UpStreamName",useClientSubnet=true$IntervalInsertion,order=$WorkingCount})
+EOF
+                                Identified=1
+                        fi
+                fi
+                if [ $WorkingSuffixa -eq 853 ]; then
+                        echo "# DIAB : INFO    : $i appears to be a DoT server"
+                        if [ $Identified -eq 0 ]; then
+                                cat << EOF >> /etc/routedns/resolvers.toml
+[resolvers.routedns$WorkingCount]
+address = "$i"
+protocol = "dot"
+
+EOF                
+                                cat << EOF >> /etc/routedns/listeners.toml
+[listeners.routedns$WorkingCount-udp]
+address = ":900$WorkingCount"
+protocol = "udp"
+resolver = routedns$WorkingCount
+
+EOF
+                                cat << EOF >> /etc/dnsdist/dnsdist.conf
+newServer({address="127.0.0.1:900$WorkingCount",name="$UpStreamName",useClientSubnet=true$IntervalInsertion,order=$WorkingCount})
+EOF
+                                Identified=1
+                        fi
+                fi
+                if [ $WorkingSuffixb -eq 53 ]; then
+                        echo "# DIAB : INFO    : $i appears to be a plain old DNS server"
+                        if [ $Identified -eq 0 ]; then
+                                cat << EOF >> /etc/dnsdist/dnsdist.conf
+newServer({address="$i",name="$UpStreamName",useClientSubnet=true$IntervalInsertion,order=$WorkingCount})
+EOF
+                                Identified=1
+                        fi
+                fi             
                 WorkingCount=`expr $WorkingCount + 1`
+                Identified=0
         done
         # Declare "connectivitycheck" servers
         cat << EOF >> /etc/dnsdist/dnsdist.conf
