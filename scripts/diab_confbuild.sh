@@ -112,7 +112,7 @@ addDOHLocal("0.0.0.0", "/ssl/cert.pem", "/ssl/key.pem", "/dns-query", { doTCP=tr
 EOF
                         else
                                 echo "# DIAB : WARNING : SSL files NOT found - only able to enable DoH insecure server"
-
+                        fi
                         echo "# DIAB : INFO    : Enabling DoH insecure server on TCP port 8053"
                         cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- DoH **INSECURE** configuration.
@@ -122,7 +122,6 @@ EOF
 addDOHLocal("0.0.0.0:8053", nil, nil, "/dns-query", { reusePort=true, trustForwardedForHeader=true })
 --
 EOF
-                        fi
                 fi
         fi
         # Add general configuration
