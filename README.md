@@ -6,7 +6,9 @@ The use-case is quite specific, but may be surprisingly useful for many.  Read o
 
 This container makes use of:
  - the [bitnami/minideb](https://hub.docker.com/r/bitnami/minideb/) image
- - the totally wonderful [dnsdist](https://dnsdist.org) - which provides the DoH, DoT and DNS functionality
+ - the totally wonderful [dnsdist](https://dnsdist.org) - which provides the DoH, DoT and DNS front end functionality
+ - routedns (https://github.com/folbricht/routedns) for DoT and DoH backend support
+ - a modified version of orderedLeastOutstanding (https://github.com/sysadminblog/dnsdist-configs/blob/master/orderedLeastOutstanding.lua)
  - Some of the authors own scripting ([bash](https://www.gnu.org/software/bash/) and [lua](http://www.lua.org/))
  
 ## Why encrypt DNS?
@@ -21,14 +23,14 @@ DNS encryption combined with ESNI makes things a bit better, and *diab* is here 
 As mentioned, this is quite specific - but is designed to keep as much of 'your' device traffic as secure as can be.
 
 The assumption is that you already (or want to):
-- Run your own Linux server at home
+- Run or host your own Linux server 
 - Run Docker on said server
 - Have an internet connection with a unique (static or dynamic) external IP address
-- Have a home router with port forwarding capabilities
-- Run your own local DNS service/filtering (i.e. piHole)
+- Have a router with port forwarding capabilities
+- Run your own DNS service/filtering (i.e. piHole)
 -- You don't want devices/browsers going to "other" DNS providers
 -- You may already have piHole (or other DNS tool) configured to securely talk to another DNS service, i.e. OpenDNS via DNSCrypt
-- Run your own VPN (i.e. WireGuard) to secure your mobile device traffic - and get piHole cover when roaming
+- Run your own VPN (i.e. WireGuard) to secure your mobile device traffic (which means access to your piHole server when roaming!)
 -- You want to use the "Always-On" and "Block connections without VPN" options on your mobile
 - *Don't* want to operate a "public" facing DNS service, that you need to connect to your VPN....
 - *Don't* want a mobile device to report "No internet connection" when using restricted DNS
@@ -90,6 +92,8 @@ By default, it will allow Android mobile devices to resolve *client1-5.google.co
 
 Over and above that, you can allow then certain addresses on your domain to respond - i.e. WireGuard.  
 
+**COMING SOON :** Addition of routeDNS within *diab* to enable connection **to** DoH or DoT servers
+
 # Configuration
 
 ## Volumes
@@ -105,15 +109,16 @@ Over and above that, you can allow then certain addresses on your domain to resp
 * **DIAB_ENABLE_DNS** - Set this to **1** to enable "normal" DNS.  It will run on 0.0.0.0:53
 * **DIAB_ENABLE_DOT** - Set this to **1** to enable DoT. It will run on 0.0.0.0:853 - and **requires** /ssl/cert.pem and /ssl/key.pem to be available via the /ssl bind mount volume above.
 * **DIAB_ENABLE_DOH** - Set this to **1** to enable DoT. It will run on 0.0.0.0:443 - and **requires** /ssl/cert.pem and /ssl/key.pem to be available via the /ssl bind mount volume above.
-** It will *also* enable an "insecure" DOH server on 0.0.0.0:8053 - which you can use with Traefik (see below)
+** It will *also* enable an "insecure" DOH server on 0.0.0.0:8053 - which you can use with Traefik, nginx or HAproxy (see below)
 * **DIAB_ALLOWED_EXTERNALLY** - Set this to a comma separated list of hostnames you want to resolve.  One should be your WireGuard hostname (i.e. *vpn.yoursubdomain.yourdomain.com*)
 * **DIAB_ENABLE_LOGGING** - Set this to **1** to enable textual messages in the Docker logs/stdout
 * **DIAB_ENABLE_ADVANCED_LOGGING** - Set this to 1 to enable verbose messaging from dnsdist itself
 * **DIAB_ENABLE_WEBSERVER** - Set to 1 to enable the dnsdist webserver.  It will run on 0.0.0.0:8053
 * **DIAB_TRUSTED_LANS** - Set this to a comma separated list of netmasks you wish to allow, (i.e. *192.168.1.0/24,172.17.0.0/16*)
-* **DIAB_UPSTREAM_IP_AND_PORT** - Set this to the IP and port of your chosen DNS server (i.e. *1.2.3.4:53*)
-* **DIAB_UPSTREAM_NAME** - Set this to a friendly name for your chosen DNS server (i.e. *piHole*) - it will show in the web interface and logs
+* **DIAB_UPSTREAM_IP_AND_PORT** - Set this to a comma separated list of IPs and ports of your chosen DNS server (i.e. *1.2.3.4:53*)
+* **DIAB_UPSTREAM_NAME** - Set this to a comma spearated list of friendly names for your chosen DNS servers (i.e. *piHole*) - they will show in the web interface and logs
 * **DIAB_WEB_PASSWORD** - Set to whatever you want your webserver password to be.  The username can be anything.
+* **DIAB_WEB_APIKEY** - Set to whatever you want to use as your dnsdist web API key.  *diab* will generate one for you if not supplied
 
 ## Network Requirements
 
@@ -169,6 +174,7 @@ To ensure *diab* sees the correct external IP of a client, you may need to updat
     
 You will then need to restart Traefik, via `docker restart traefik`<br/>
 *diab* is already configured to handle X-Forwarded-For headers, but it will ***only*** function if the above is enabled in Traefik.
+NB : You can do similar reverse proxying with nginx or HAProxy - but those are documented elsewhere
 
 ## WireGuard client config
 
