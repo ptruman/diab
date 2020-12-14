@@ -26,7 +26,7 @@ else
                 export DIAB_UPSTREAM_NAME=$DIAB_UPSTREAM_IP_AND_PORT
                 echo "# DIAB : WARNING : DIAB_UPSTREAM_NAME was not set. Using $DIAB_UPSTREAM_IP_AND_PORT"
         fi
-        echo "# DIAB : INFO    : Next DNS hop configured as $DIAB_UPSTREAM_NAME ($DIAB_UPSTREAM_IP_AND_PORT)"
+        echo "# DIAB : INFO    : Next DNS hops requested as $DIAB_UPSTREAM_NAME ($DIAB_UPSTREAM_IP_AND_PORT)"
         # Create the config folders if not present...
         mkdir -p /etc/dnsdist
         mkdir -p /etc/routedns
@@ -42,8 +42,8 @@ else
                 else
                         echo "# DIAB : INFO    : DIAB_ENABLE_LOGGING not set. Disabling logging."
                         echo "-- Disable Logging (set Logging=1 to enable)" >> /etc/dnsdist/dnsdist.conf
-                        echo "Logging=0" >> /etc/dnsdist/dnsdist.conf               
-                fi 
+                        echo "Logging=0" >> /etc/dnsdist/dnsdist.conf
+                fi
         fi
         cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- Create ACL to allow all access (assuming firewalls!)
@@ -57,7 +57,7 @@ EOF
                         if [ -f $DIAB_WEB_PASSWORD ]; then
                                 export DIAB_WEB_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
                                 echo "# DIAB : INFO    : DIAB_ENABLED_WEBSERVER is set, but DIAB_WEB_PASSWORD is not."
-                                echo "# DIAB : INFO    : Generated DIAB_WEB_PASSWORD as $DIAB_WEB_PASSWORD"                              
+                                echo "# DIAB : INFO    : Generated DIAB_WEB_PASSWORD as $DIAB_WEB_PASSWORD"
                         fi
                         # Check ew have an APIKEY specified - generate one if not
                         if [ -f $DIAB_WEB_APIKEY ]; then
@@ -74,7 +74,7 @@ EOF
                 if [ $DIAB_ENABLE_DNS -eq 1 ]; then
                 echo "# DIAB : INFO    : DIAB_ENABLE_DNS is set.  Enabling basic DNS on port 53"
                 cat << EOF >> /etc/dnsdist/dnsdist.conf
--- add basic DNS 
+-- add basic DNS
 addLocal('0.0.0.0:53', { reusePort=true })
 --
 EOF
@@ -106,7 +106,7 @@ EOF
                         if [ -f /ssl/cert.pem ] && [ -f /ssl/key.pem ]; then
                                 echo "# DIAB : INFO    : SSL files found - enabling DoH secure server on TCP port 443"
                                 cat << EOF >> /etc/dnsdist/dnsdist.conf
--- DoH Configuration 
+-- DoH Configuration
 -- Includes path for certs in /ssl and bind on all interfces
 -- By default listens on port 443
 addDOHLocal("0.0.0.0", "/ssl/cert.pem", "/ssl/key.pem", "/dns-query", { doTCP=true, reusePort=true, tcpFastOpenSize=64, trustForwardedForHeader=true })
@@ -144,7 +144,7 @@ setECSSourcePrefixV4(32)
 setECSSourcePrefixV6(128)
 setMaxTCPConnectionsPerClient(1000)   -- set X(int) for number of tcp connections from a single client. Useful for rate limiting the concurrent connections.
 setMaxTCPQueriesPerConnection(100)    -- set X(int) , similiar to addAction(MaxQPSIPRule(X), DropAction())
--- 
+--
 EOF
         # Check for dnsdist healthcheck override.  By default these are every second, which may pollute server logs
         # Setting higher will reduce messages but may slow down failover in some situations
@@ -158,16 +158,22 @@ EOF
         # Process and add specified DIAB_UPSTREAM_IP_AND_PORT values
         echo "-- Backend DNS servers" >> /etc/dnsdist/dnsdist.conf
         Working=`echo $DIAB_UPSTREAM_IP_AND_PORT | sed "s/ //g"`
+        Working=`echo $Working | sed "s/\r//g;"`
         WorkingCount=0
         for i in $(echo $Working | sed "s/,/ /g"); do
                 TempCount=`expr $WorkingCount + 1`
-                echo "# DIAB : INFO    : Processing upstream $i (Order=$WorkingCount)"
+                echo "# DIAB : INFO    : Processing upstream '$i' (Order=$TempCount)"
                 # Grab identifiers...
                 WorkingPrefix=`echo $i | cut -c1-5`
-                WorkingSuffixa=`echo $i | tail -c 3`
-                WorkingSuffixb=`echo $i | tail -c 2`
+                WorkingSuffixa=${i: -3}
+                WorkingSuffixb=${i: -2}
                 Identified=0
-                UpstreamName=`echo $DIAB_UPSTREAM_NAME | sed "s/,/ /g" | awk '{print $TempCount}'`
+                IFS=',' read -ra UpstreamName <<< "$DIAB_UPSTREAM_NAME"
+                USN=${UpstreamName[$WorkingCount]}
+                echo "Working Prefix : $WorkingPrefix"
+                echo "Working SuffixA : $WorkingSuffixa"
+                echo "Working SuffixB : $WorkingSuffixb"
+                echo "USN = ${UpstreamName[$WorkingCount]}"
                 if [ $WorkingPrefix == "https" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoH server"
                         if [ $Identified -eq 0 ]; then
@@ -175,52 +181,49 @@ EOF
 [resolvers.routedns$WorkingCount]
 address = "$i"
 protocol = "doh"
-
 EOF
                                 cat << EOF >> /etc/routedns/listeners.toml
 [listeners.routedns$WorkingCount-udp]
 address = ":900$WorkingCount"
 protocol = "udp"
 resolver = routedns$WorkingCount
-
 EOF
                                 cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="127.0.0.1:900$WorkingCount",name="$UpStreamName",useClientSubnet=true$IntervalInsertion,order=$WorkingCount})
+newServer({address="127.0.0.1:900$WorkingCount",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
 EOF
                                 Identified=1
                         fi
                 fi
-                if [ $WorkingSuffixa -eq 853 ]; then
+                if [ $WorkingSuffixa == "853" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoT server"
                         if [ $Identified -eq 0 ]; then
                                 cat << EOF >> /etc/routedns/resolvers.toml
 [resolvers.routedns$WorkingCount]
 address = "$i"
 protocol = "dot"
-
-EOF                
+EOF
                                 cat << EOF >> /etc/routedns/listeners.toml
 [listeners.routedns$WorkingCount-udp]
 address = ":900$WorkingCount"
 protocol = "udp"
 resolver = routedns$WorkingCount
-
 EOF
                                 cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="127.0.0.1:900$WorkingCount",name="$UpStreamName",useClientSubnet=true$IntervalInsertion,order=$WorkingCount})
+newServer({address="127.0.0.1:900$WorkingCount",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
 EOF
                                 Identified=1
                         fi
                 fi
-                if [ $WorkingSuffixb -eq 53 ]; then
+                if [ $WorkingSuffixb == "53" ]; then
                         echo "# DIAB : INFO    : $i appears to be a plain old DNS server"
                         if [ $Identified -eq 0 ]; then
                                 cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="$i",name="$UpStreamName",useClientSubnet=true$IntervalInsertion,order=$WorkingCount})
+newServer({address="$i",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
 EOF
                                 Identified=1
                         fi
-                fi             
+                fi
+                echo "# DIAB : INFO    : Added $i as $USN"
                 WorkingCount=`expr $WorkingCount + 1`
                 Identified=0
         done
@@ -297,7 +300,6 @@ function checkInternal(dq)
         end
 end
 addAction(AllRule(), LuaAction(checkInternal))
-
 -- Updated orderedLeastOutstanding function from https://github.com/sysadminblog/dnsdist-configs/blob/master/orderedLeastOutstanding.lua
 -- Modified by the diab project
 function orderedLeastOutstanding(servers, dq)
@@ -358,18 +360,16 @@ function orderedLeastOutstanding(servers, dq)
         return leastOutstanding.policy(serverlist[lowest], dq)
 end
 setServerPolicyLua("orderedLeastOutstanding", orderedLeastOutstanding)
-
 EOF
         if [ $DIAB_ENABLE_CLI ]; then
                 if [ $DIAB_ENABLE_CLI -eq 1 ]; then
                         echo "# DIAB : INFO    : Enabling CLI access..."
-                        secureKey=`dnsdist -l 127.0.0.1:999 -e "makeKey()" -C /etc/dnsdist/dnsdist.conf | awk '{split($0,key,"\"");print key[2]}'`
+                        secureKey=`echo "makeKey()" | dnsdist -l 127.0.0.1:999 | tail -1`
                         echo "-- Enable CLI access" >> /etc/dnsdist/dnsdist.conf
                         echo "controlSocket('127.0.0.1:5199')" >> /etc/dnsdist/dnsdist.conf
-                        echo "setKey(\"$secureKey\")" >> /etc/dnsdist/dnsdist.conf
+                        echo $secureKey >> /etc/dnsdist/dnsdist.conf
                 fi
         fi
-        
         echo "# DIAB : INFO    : Startup script complete"
         echo "#"
 fi
