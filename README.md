@@ -92,7 +92,7 @@ By default, it will allow Android mobile devices to resolve *client1-5.google.co
 
 Over and above that, you can allow then certain addresses on your domain to respond - i.e. WireGuard.  
 
-**COMING SOON :** Addition of routeDNS within *diab* to enable connection **to** DoH or DoT servers (configs are now built, pending execution of binary)
+**COMING SOON :** Addition of routeDNS within *diab* to enable connection **to** DoH or DoT servers (configs are now built, pending execution of binary)<br/>
 **COMING SOON :** Switching failover - currently *diab* will talk to the FIRST server ONLY unless it's down, then the second.  This will be optional in future)
 
 
@@ -252,5 +252,5 @@ Device -> DoH Query 443 -> *diab* DoT port 443 -> Allow<br/>
 
 # Notes
 
-* dnsdist does *not* (itself, yet) communicate *with* DoH or DoT *servers* - only *clients*. If you want a secure "end to end" stream, you will need to provide one - either via a separate DoT/DoH proxy.  Some router firmware (for example [Tomato](https://freshtomato.org/)) allow capture and routing of DNS via DNSCrypt to a chosen external endpoint.
+* dnsdist does *not* (itself, yet) communicate *with* DoH or DoT *servers* - only *clients*. If you want a secure "end to end" stream, you will need to provide one - either via a separate DoT/DoH proxy.  Some router firmware (for example [Tomato](https://freshtomato.org/)) allow capture and routing of DNS via DNSCrypt to a chosen external endpoint.  *diab* will (shortly) be adding DoH and DoT communication via routedns - we're just not quite there....yet :)
 * With a little reading, you could configure dnsdist.conf to add another standard DNS serve on an/other port (not 53) - which could receive requests from piHole (or other server) and then chain to an/other DoT or DoH service/container on your LAN, as necessary via a dnsdist *pool* - i.e.<br/> DNS/DoT/DoH -> diab Front -> pihole -> diab Rear -> External DNSCrypt service
