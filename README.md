@@ -92,7 +92,9 @@ By default, it will allow Android mobile devices to resolve *client1-5.google.co
 
 Over and above that, you can allow then certain addresses on your domain to respond - i.e. WireGuard.  
 
-**COMING SOON :** Addition of routeDNS within *diab* to enable connection **to** DoH or DoT servers
+**COMING SOON :** Addition of routeDNS within *diab* to enable connection **to** DoH or DoT servers (configs are now built, pending execution of binary)
+**COMING SOON :** Switching failover - currently *diab* will talk to the FIRST server ONLY unless it's down, then the second.  This will be optional in future)
+
 
 # Configuration
 
