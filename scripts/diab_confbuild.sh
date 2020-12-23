@@ -179,13 +179,18 @@ EOF
                         if [ $Identified -eq 0 ]; then
                                 cat << EOF >> /etc/routedns/resolvers.toml
 [resolvers.routedns$WorkingCount]
-address = "$i"
+address = "$i{?dns}"
 protocol = "doh"
 EOF
                                 cat << EOF >> /etc/routedns/listeners.toml
 [listeners.routedns$WorkingCount-udp]
 address = ":900$WorkingCount"
 protocol = "udp"
+resolver = routedns$WorkingCount
+
+[listeners.routedns$WorkingCount-tcp]
+address = ":900$WorkingCount"
+protocol = "tcp"
 resolver = routedns$WorkingCount
 EOF
                                 cat << EOF >> /etc/dnsdist/dnsdist.conf
@@ -206,6 +211,11 @@ EOF
 [listeners.routedns$WorkingCount-udp]
 address = ":900$WorkingCount"
 protocol = "udp"
+resolver = routedns$WorkingCount
+
+[listeners.routedns$WorkingCount-tcp]
+address = ":900$WorkingCount"
+protocol = "tcp"
 resolver = routedns$WorkingCount
 EOF
                                 cat << EOF >> /etc/dnsdist/dnsdist.conf
