@@ -1,7 +1,7 @@
 #!/bin/bash
 # DIAB Configuration Build Script
 # Set Version
-DV="1.4"
+DV="1.5"
 echo "#"
 echo "# DIAB : INFO    : Starting diab V$DV"
 # Check for existing config file...
@@ -30,8 +30,22 @@ else
         # Create the config folders if not present...
         mkdir -p /etc/dnsdist
         mkdir -p /etc/routedns
-        echo > /etc/routedns/listeners.toml
-        echo > /etc/routedns/resolvers.toml
+        if [ -f "/etc/routedns/listeners.toml" ]; then
+                echo "# DIAB : INFO    : Found existing /etc/routedns/listeners.toml - skipping blank creation"
+                CreateRouteDNSListeners=0
+        else
+                echo "# DIAB : INFO    : No existing /etc/routedns/listeners.toml found - creating shell"
+                CreateRouteDNSListeners=1
+                echo > /etc/routedns/listeners.toml
+        fi
+        if [ -f "/etc/routedns/resolvers.toml" ]; then
+                echo "# DIAB : INFO    : Found existing /etc/routedns/resolvers.toml - skipping blank creation"
+                CreateRouteDNSResolvers=0
+        else
+                echo "# DIAB : INFO    : No existing /etc/routedns/resolvers.toml found - creating shell"
+                CreateRouteDNSResolvers=1
+                echo > /etc/routedns/resolvers.toml
+        fi
         # Start building the config file...
         # Check if Logging has been requested
         if [ $DIAB_ENABLE_LOGGING ]; then
@@ -177,12 +191,17 @@ EOF
                 if [ $WorkingPrefix == "https" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoH server"
                         if [ $Identified -eq 0 ]; then
-                                cat << EOF >> /etc/routedns/resolvers.toml
+                                if [ $CreateRouteDNSListeners -eq 1 ]; then
+                                        echo "# DIAB : INFO    : Building routedns listener config for $i (DoH)"
+                                        cat << EOF >> /etc/routedns/resolvers.toml
 [resolvers.routedns$WorkingCount]
 address = "$i{?dns}"
 protocol = "doh"
 EOF
-                                cat << EOF >> /etc/routedns/listeners.toml
+                                fi
+                                if [ $CreateRouteDNSResolvers -eq 1 ]; then
+                                        echo "# DIAB : INFO    : Building routedns resolver config for $i (DoH)"
+                                        cat << EOF >> /etc/routedns/listeners.toml
 [listeners.routedns$WorkingCount-udp]
 address = ":900$WorkingCount"
 protocol = "udp"
@@ -193,21 +212,27 @@ address = ":900$WorkingCount"
 protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
-                                cat << EOF >> /etc/dnsdist/dnsdist.conf
+                                        cat << EOF >> /etc/dnsdist/dnsdist.conf
 newServer({address="127.0.0.1:900$WorkingCount",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
 EOF
+                                fi
                                 Identified=1
                         fi
                 fi
                 if [ $WorkingSuffixa == "853" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoT server"
                         if [ $Identified -eq 0 ]; then
-                                cat << EOF >> /etc/routedns/resolvers.toml
+                                if [ $CreateRouteDNSListeners -eq 1 ]; then
+                                        echo "# DIAB : INFO    : Building routedns listener config for $i (DoT)"
+                                        cat << EOF >> /etc/routedns/resolvers.toml
 [resolvers.routedns$WorkingCount]
 address = "$i"
 protocol = "dot"
 EOF
-                                cat << EOF >> /etc/routedns/listeners.toml
+                                fi
+                                if [ $CreateRouteDNSResolvers -eq 1 ]; then
+                                        echo "# DIAB : INFO    : Building routedns resolver config for $i (DoT)"
+                                        cat << EOF >> /etc/routedns/listeners.toml
 [listeners.routedns$WorkingCount-udp]
 address = ":900$WorkingCount"
 protocol = "udp"
@@ -218,9 +243,10 @@ address = ":900$WorkingCount"
 protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
-                                cat << EOF >> /etc/dnsdist/dnsdist.conf
+                                        cat << EOF >> /etc/dnsdist/dnsdist.conf
 newServer({address="127.0.0.1:900$WorkingCount",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
 EOF
+                                fi
                                 Identified=1
                         fi
                 fi
