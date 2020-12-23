@@ -116,7 +116,7 @@ Over and above that, you can allow then certain addresses on your domain to resp
 * **DIAB_ALLOWED_EXTERNALLY** - Set this to a comma separated list of hostnames you want to resolve.  One should be your WireGuard hostname (i.e. *vpn.yoursubdomain.yourdomain.com*)
 * **DIAB_ENABLE_LOGGING** - Set this to **1** to enable textual messages in the Docker logs/stdout
 * **DIAB_ENABLE_ADVANCED_LOGGING** - Set this to 1 to enable verbose messaging from dnsdist itself
-* **DIAB_ENABLE_WEBSERVER** - Set to 1 to enable the dnsdist webserver.  It will run on 0.0.0.0:8053
+* **DIAB_ENABLE_WEBSERVER** - Set to 1 to enable the dnsdist webserver.  It will run on 0.0.0.0:8083
 * **DIAB_TRUSTED_LANS** - Set this to a comma separated list of netmasks you wish to allow, (i.e. *192.168.1.0/24,172.17.0.0/16*)
 * **DIAB_UPSTREAM_IP_AND_PORT** - Set this to a comma separated list of IPs and ports of your chosen DNS server (i.e. *1.2.3.4:53*)
 * **DIAB_UPSTREAM_NAME** - Set this to a comma spearated list of friendly names for your chosen DNS servers (i.e. *piHole*) - they will show in the web interface and logs
