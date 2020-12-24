@@ -3,7 +3,7 @@
 # Set Version
 DV="1.6"
 echo "#"
-echo "# DIAB : INFO    : Starting diab V$DV configurator..."
+echo "# DIAB : INFO    : diab V$DV configurator starting..."
 # Check for existing config file...
 if [ -f "/etc/dnsdist/dnsdist.conf" ]; then
         # Config present - do nothing
