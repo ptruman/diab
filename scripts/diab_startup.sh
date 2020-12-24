@@ -1,9 +1,7 @@
 #!/bin/bash
 # DIAB Startup Script
-#
 echo "#"
 echo "# DIAB : INFO    : Attempting to start diab..."
-echo "#"
 # Run the configurator....
 echo "# DIAB : INFO    : Launching diab configurator..."
 /usr/sbin/diab_confbuild.sh
