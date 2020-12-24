@@ -2,7 +2,6 @@
 # DIAB Configuration Build Script
 # Set Version
 DV="1.6"
-echo "#"
 echo "# DIAB : INFO    : diab V$DV configurator starting..."
 # Check for existing config file...
 if [ -f "/etc/dnsdist/dnsdist.conf" ]; then
@@ -406,6 +405,6 @@ EOF
                         echo $secureKey >> /etc/dnsdist/dnsdist.conf
                 fi
         fi
-        echo "# DIAB : INFO    : Startup script complete"
+        echo "# DIAB : INFO    : diab V$DV configurator finished!"
         echo "#"
 fi
