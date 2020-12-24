@@ -76,7 +76,7 @@ You might at this point think "*Hang on, won't WireGuard be encrypting the DNS t
 
 *diab*.
 
-diab exists to **securely** front **all** your internal *and* external DNS needs - in conjunction with piHole and Traefik.
+diab exists to **securely** front **all** your internal *and* external DNS needs - in conjunction with (*ideally*) piHole and Traefik.
 
 Running as a Docker container on a macvlan interface (i.e. with it's own LAN IP) it will provide:
 
@@ -92,9 +92,8 @@ By default, it will allow Android mobile devices to resolve *client1-5.google.co
 
 Over and above that, you can allow then certain addresses on your domain to respond - i.e. WireGuard.  
 
-**COMING SOON :** Addition of routeDNS within *diab* to enable connection **to** DoH or DoT servers (configs are now built, pending execution of binary)<br/>
+**RECENTLY ADDED :** Addition of routeDNS within *diab* to enable connection **to** DoH or DoT servers (via routedns)<br/>
 **COMING SOON :** Switching failover - currently *diab* will talk to the FIRST server ONLY unless it's down, then the second.  This will be optional in future)
-
 
 # Configuration
 
@@ -102,21 +101,24 @@ Over and above that, you can allow then certain addresses on your domain to resp
 
 * `/your/ssl/folder:/ssl:ro` (**needed** for DoH and/or DoT - if enabled, it **must** contain *cert.pem* and *key.pem*)
 * `/your/dnsdist/config/folder:/etc/dnsdist` (optional - see below)
+* `/your/routedns/config/folder:/etc/routedns` (optional - see below)
 * `/etc/localtime:/etc/localtime:ro` (optional *but* ensures correct timestamps)
 * `/etc/timezone:/etc/timezone:ro` (optional *but* ensures correct timestamps)
 
+**Note** : If you don't create bind mounts for /etc/dnsdist and /etc/routedns, your configuration will not persist container recreation.  If *diab* doesn't find existing configuration files on startup, it will (re)create the necessary ones.  If you want to 'tweak' your setup once *diab* has got you going, mounted configs are the way to go.
+
 ## Environment
 
-* **DIAB_CHECKINTERVAL** - Set this to a numberic value in *seconds* (i.e. 120) - where dnsdist will poll for your DIAB_UPSTREAM_IP_AND_PORT (default is 1). This can help reduce downstream log buildup
+* **DIAB_CHECKINTERVAL** - Set this to a numberic value in *seconds* (i.e. 60) - where dnsdist will poll for your DIAB_UPSTREAM_IP_AND_PORT (default is **1**). This can help reduce downstream log buildup, but may increase failover time.
 * **DIAB_ENABLE_CLI** - Set this to **1** to enable CLI access.  This will enable CLI access from *within* the container using *dnsdist -C /etc/dnsdist/dnsdist.conf*
 * **DIAB_ENABLE_DNS** - Set this to **1** to enable "normal" DNS.  It will run on 0.0.0.0:53
 * **DIAB_ENABLE_DOT** - Set this to **1** to enable DoT. It will run on 0.0.0.0:853 - and **requires** /ssl/cert.pem and /ssl/key.pem to be available via the /ssl bind mount volume above.
 * **DIAB_ENABLE_DOH** - Set this to **1** to enable DoT. It will run on 0.0.0.0:443 - and **requires** /ssl/cert.pem and /ssl/key.pem to be available via the /ssl bind mount volume above.
 ** It will *also* enable an "insecure" DOH server on 0.0.0.0:8053 - which you can use with Traefik, nginx or HAproxy (see below)
-* **DIAB_ALLOWED_EXTERNALLY** - Set this to a comma separated list of hostnames you want to resolve.  One should be your WireGuard hostname (i.e. *vpn.yoursubdomain.yourdomain.com*)
+* **DIAB_ALLOWED_EXTERNALLY** - Set this to a comma separated list of hostnames you want untrusted hosts to be able to resolve.  One should be your WireGuard hostname (i.e. *vpn.yoursubdomain.yourdomain.com*)
 * **DIAB_ENABLE_LOGGING** - Set this to **1** to enable textual messages in the Docker logs/stdout
-* **DIAB_ENABLE_ADVANCED_LOGGING** - Set this to 1 to enable verbose messaging from dnsdist itself
-* **DIAB_ENABLE_WEBSERVER** - Set to 1 to enable the dnsdist webserver.  It will run on 0.0.0.0:8083
+* **DIAB_ENABLE_ADVANCED_LOGGING** - Set this to **1** to enable verbose messaging from dnsdist itself
+* **DIAB_ENABLE_WEBSERVER** - Set this to **1** to enable the dnsdist webserver.  It will run on 0.0.0.0:8083
 * **DIAB_TRUSTED_LANS** - Set this to a comma separated list of netmasks you wish to allow, (i.e. *192.168.1.0/24,172.17.0.0/16*)
 * **DIAB_UPSTREAM_IP_AND_PORT** - Set this to a comma separated list of IPs and ports of your chosen DNS server (i.e. *1.2.3.4:53*)
 * **DIAB_UPSTREAM_NAME** - Set this to a comma spearated list of friendly names for your chosen DNS servers (i.e. *piHole*) - they will show in the web interface and logs
@@ -131,7 +133,7 @@ It is **highly** recommended you run the container either on a macvlan interface
 
 ### External
 
-You should create a CNAME record (i.e. *dns.yoursubdomain.yourdomain.com*) and point it to either
+You should create a CNAME record (i.e. *dns.yoursubdomain.yourdomain.com*) and point it to either:
 - the dynamic DNS hostname you use to point to your dynamic host IP
 - the static IP of your host (if you are lucky enough to have a static IP!)
 
@@ -177,7 +179,7 @@ To ensure *diab* sees the correct external IP of a client, you may need to updat
     
 You will then need to restart Traefik, via `docker restart traefik`<br/>
 *diab* is already configured to handle X-Forwarded-For headers, but it will ***only*** function if the above is enabled in Traefik.
-NB : You can do similar reverse proxying with nginx or HAProxy - but those are documented elsewhere
+NB : You can do similar reverse proxying with nginx or HAProxy - but that type of setup is [documented elsewhere](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/)!
 
 ## WireGuard client config
 
@@ -189,7 +191,7 @@ You should note here, however, that (by default) WireGuard runs source NAT (SNAT
 
 ### Splitting DNS and DHCP in piHole
 
-If you currently use piHole for DHCP, all your DHCP clients will use piHole for DNS.  You can leave them there, or you can use piHole's dnsmasq config to use another DNS server (i.e. *diab*) and *diab* will then loop back via piHole.  Assuming you have a bind mounted volume for piHole dnsmasq config, you can just create a file in that folder called *03-pihole-dns-override.conf* and put this one line within it:<br/>
+If you currently use piHole for DHCP, all your DHCP clients are *probably* using piHole for DNS.  You can leave them there, or you can use piHole's dnsmasq config to use another DNS server (i.e. *diab*) and *diab* can loop back via piHole.  Assuming you have a bind mounted volume for piHole dnsmasq config, you can just create a file in that folder called *03-pihole-dns-override.conf* and put this one line within it:<br/>
 `dhcp-option=6,1.2.3.4`<br/>
 ...where 1.2.3.4 is your *diab* macvlan IP.  Then just issue a:<br/>
 `docker restart pihole`<br/>
@@ -213,26 +215,31 @@ Assuming your pihole container is called pihole, the above will get you to a pih
 
 If you have not used dnsdist or *diab* before, it is advisable you
 - set your required environment variables (per the above)-
-- ensure /ssl can be mounted to the container-
+- ensure /ssl can be mounted to the container
+- ideally ensure /etc/dnsdist and /etc/routedns are bind mounts to give you persistent configuration
 - start your container!
 
 Once configured and started, *diab* will check for the existence of /etc/dnsdist/dnsdist.conf<br/>
 If the file does **not** exist, it will be created, but **only within the running container** (see below).<br/>
 If the file **does** exist (i.e. from a bind mounted volume, or a restarted container) it will be used (most environment variables will be ignored - see below).<br/>
 
-The only environment variable that operates outside of the configuration is *DIAB_ENABLE_ADVANCED_LOGGING*.  If you have a bind mounted volume containing dnsdist.conf and wish to change config, you will have to either:
+The **only** environment variable that operates outside of the configuration is *DIAB_ENABLE_ADVANCED_LOGGING* - which controls dnsdist verbose logging (set it to **1** to enable it).
+
+If you have a bind mounted volume containing dnsdist.conf and wish to change config, you will have to either:
 - edit that file and restart the container<br>
 or <br/>
 - remove the file and allow the container to build one itself
 
-Once you are happy with your running configuration, you can copy it out of the container to a local folder thus:<br/>
+If you didn't create bind mounts for /etc/dnsdist, but are happy with your running configuration, you can copy it out of the container to a local folder thus:<br/>
 
 `cd /your/desired/host/folder`<br/>
 `docker cp containername:/etc/dnsdist/dnsdist.conf ./dnsdist.conf`
 
+You can then put that file in a bind mount for /etc/dnsdist and the container will use it on startup.
+
 # Routing
 
-If you follow the above setup, you should basically be able to envisage the following:
+If you followed the above setup, you should basically be able to envisage the following:
 
 ## External client (Request for an ADDRESS from a client *NOT* within *DIAB_TRUSTED_LANS*)
 
@@ -244,13 +251,15 @@ Mobile Device -> DoH Query 443 -> Your Router -> Port Forward 443 -> *diab* DoH 
 ...where PROCESS = Allow or Reject<br/>
 **NOTE:** Any request for an ADDRESS **NOT** within *DIAB_ALLOWED_EXTERNALLY* will be **rejected**.<br/>
 
+If you are using *diab* for it's initial use case, this would mean your mobile device on 4G with Private DNS on would resolve your hostname and connect via DoT to resolve your Wireguard hostname.  As that hostname is allowed externally, it would resolve, enabling Wireguard to connect.  At that point your device would gain an internal (Wireguard) IP which should be on your Trusted LAN IPs, and everything else resolves - per the below...
+
 ## Internal client (Request for an ADDRESS from a client WITHIN *DIAB_TRUSTED_LANS*)
 
 Device -> DNS Query 53 -> *diab* DNS port 53 -> Allow<br/>
 Device -> DoT Query 853 -> *diab* DoT port 853 -> Allow<br/>
 Device -> DoH Query 443 -> *diab* DoT port 443 -> Allow<br/>
 
-# Notes
+## Onward resolution (*diab* to the outside)
 
-* dnsdist does *not* (itself, yet) communicate *with* DoH or DoT *servers* - only *clients*. If you want a secure "end to end" stream, you will need to provide one - either via a separate DoT/DoH proxy.  Some router firmware (for example [Tomato](https://freshtomato.org/)) allow capture and routing of DNS via DNSCrypt to a chosen external endpoint.  *diab* will (shortly) be adding DoH and DoT communication via routedns - we're just not quite there....yet :)
-* With a little reading, you could configure dnsdist.conf to add another standard DNS serve on an/other port (not 53) - which could receive requests from piHole (or other server) and then chain to an/other DoT or DoH service/container on your LAN, as necessary via a dnsdist *pool* - i.e.<br/> DNS/DoT/DoH -> diab Front -> pihole -> diab Rear -> External DNSCrypt service
+*diab* will resolve from the servers specified in **DIAB_UPSTREAM_IP_AND_PORT**, in the order specified.
+If a remote DoH or DoT server was specified, routedns is used to create an internal 'bridge' between dnsdist and the DoH and DoT server.
