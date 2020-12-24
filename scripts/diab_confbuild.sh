@@ -1,9 +1,9 @@
 #!/bin/bash
 # DIAB Configuration Build Script
 # Set Version
-DV="1.5"
+DV="1.6"
 echo "#"
-echo "# DIAB : INFO    : Starting diab V$DV"
+echo "# DIAB : INFO    : Starting diab V$DV configurator..."
 # Check for existing config file...
 if [ -f "/etc/dnsdist/dnsdist.conf" ]; then
         # Config present - do nothing
