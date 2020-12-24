@@ -188,9 +188,9 @@ EOF
                 Identified=0
                 IFS=',' read -ra UpstreamName <<< "$DIAB_UPSTREAM_NAME"
                 USN=${UpstreamName[$WorkingCount]}
-                echo "Working Prefix : $WorkingPrefix"
-                echo "Working SuffixA : $WorkingSuffixa"
-                echo "Working SuffixB : $WorkingSuffixb"
+                #echo "Working Prefix : $WorkingPrefix"
+                #echo "Working SuffixA : $WorkingSuffixa"
+                #echo "Working SuffixB : $WorkingSuffixb"
                 echo "USN = ${UpstreamName[$WorkingCount]}"
                 if [ $WorkingPrefix == "https" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoH server"
