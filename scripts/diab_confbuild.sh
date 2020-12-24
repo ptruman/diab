@@ -191,7 +191,7 @@ EOF
                 #echo "Working Prefix : $WorkingPrefix"
                 #echo "Working SuffixA : $WorkingSuffixa"
                 #echo "Working SuffixB : $WorkingSuffixb"
-                echo "USN = ${UpstreamName[$WorkingCount]}"
+                #echo "USN = ${UpstreamName[$WorkingCount]}"
                 if [ $WorkingPrefix == "https" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoH server"
                         if [ $Identified -eq 0 ]; then
