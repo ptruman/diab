@@ -9,6 +9,8 @@ if [ -f "/etc/dnsdist/dnsdist.conf" ]; then
         echo "# DIAB : INFO    : Found existing /etc/dnsdist/dnsdist.conf - skipping config build"
         echo "# DIAB : WARNING : If you have changed Docker environment variables, they will not take effect as the existing file will be used."
 else
+        # Get container IP
+        ContainerIP=`awk 'END{print $1}' /etc/hosts`
         # Test for key variables
         # DIAB_UPSTREAM_IP_AND_PORT is a basic requirement - no upstream server = no operation.
         if [ -f $DIAB_UPSTREAM_IP_AND_PORT ]; then
@@ -80,12 +82,13 @@ EOF
                         fi
                         # Write webserver configuration
                         echo "webserver(\"0.0.0.0:8083\", \"$DIAB_WEB_PASSWORD\", \"$DIAB_WEB_APIKEY\", {}, \"$DIAB_TRUSTED_LANS\")" >> /etc/dnsdist/dnsdist.conf
+                        echo "# DIAB : INFO    : Webserver will be accessible at http://$ContainerIP:8083"
                 fi
         fi
         # Check for/enable base DNS...
         if [ $DIAB_ENABLE_DNS ]; then
                 if [ $DIAB_ENABLE_DNS -eq 1 ]; then
-                echo "# DIAB : INFO    : DIAB_ENABLE_DNS is set.  Enabling basic DNS on port 53"
+                echo "# DIAB : INFO    : DIAB_ENABLE_DNS is set.  Enabling basic DNS at $ContainerIP:53"
                 cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- add basic DNS
 addLocal('0.0.0.0:53', { reusePort=true })
@@ -96,7 +99,8 @@ EOF
         # Check for/enable DoT...
         if [ $DIAB_ENABLE_DOT ]; then
                 if [ $DIAB_ENABLE_DOT -eq 1 ]; then
-                        echo "# DIAB : INFO    : DIAB_ENABLE_DOT is set.  Attempting to enable DoT on TCP 853"
+                        echo "# DIAB : INFO    : DIAB_ENABLE_DOT is set.  Attempting to enable DoT at $ContainerIP:853"
+                        echo "                   Ensure your SSL certificates contain hostnames which match any provided for $ContainerIP"
                         # Check for SSL files
                         if [ -f /ssl/cert.pem ] && [ -f /ssl/key.pem ]; then
                                 cat << EOF >> /etc/dnsdist/dnsdist.conf
@@ -117,7 +121,8 @@ EOF
                 if [ $DIAB_ENABLE_DOH -eq 1 ]; then
                         # Check for SSL files
                         if [ -f /ssl/cert.pem ] && [ -f /ssl/key.pem ]; then
-                                echo "# DIAB : INFO    : SSL files found - enabling DoH secure server on TCP port 443"
+                                echo "# DIAB : INFO    : SSL files found - enabling DoH secure server at https://$ContainerIP:443/dns-query"
+                                echo "                   Ensure your SSL certificates contain hostnames which match any provided for $ContainerIP"
                                 cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- DoH Configuration
 -- Includes path for certs in /ssl and bind on all interfces
@@ -128,7 +133,7 @@ EOF
                         else
                                 echo "# DIAB : WARNING : SSL files NOT found - only able to enable DoH insecure server"
                         fi
-                        echo "# DIAB : INFO    : Enabling DoH insecure server on TCP port 8053"
+                        echo "# DIAB : INFO    : Enabling DoH insecure server at http://$ContainerIP:8053/dns-query"
                         cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- DoH **INSECURE** configuration.
 -- No /ssl/cert.pem and/or /ssl/key.pem found - can only run insecurely - bind on all interfaces
@@ -281,7 +286,7 @@ EOF
                 echo "# DIAB : INFO    : DIAB_ALLOWED_EXTERNALLY is set"
                 Working=`echo $DIAB_ALLOWED_EXTERNALLY | sed "s/ //g"`
                 for i in $(echo $Working | sed "s/,/ /g"); do
-                        echo "# DIAB : INFO    : Adding $i to hostnames allowed by external hosts"
+                        echo "# DIAB : INFO    : Adding $i to hostnames allowed for external hosts"
                         echo "AllowedDomains:add(newDNSName(\"$i\"))" >> /etc/dnsdist/dnsdist.conf
                 done
                 echo "--" >> /etc/dnsdist/dnsdist.conf
@@ -398,7 +403,9 @@ setServerPolicyLua("orderedLeastOutstanding", orderedLeastOutstanding)
 EOF
         if [ $DIAB_ENABLE_CLI ]; then
                 if [ $DIAB_ENABLE_CLI -eq 1 ]; then
-                        echo "# DIAB : INFO    : Enabling CLI access..."
+                        echo "# DIAB : INFO    : Enabling CLI access on port 5199..."
+                        echo "# DIAB : INFO    : CLI is accessible from within the container by running:"
+                        echo "                   dnsdist -c -C /etc/dnsdist/dnsdist.conf"
                         secureKey=`echo "makeKey()" | dnsdist -l 127.0.0.1:999 | tail -1`
                         echo "-- Enable CLI access" >> /etc/dnsdist/dnsdist.conf
                         echo "controlSocket('127.0.0.1:5199')" >> /etc/dnsdist/dnsdist.conf
