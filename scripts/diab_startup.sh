@@ -13,10 +13,10 @@ fi
 # Run the configurator....
 /usr/sbin/diab_confbuild.sh
 # Check if we should start routedns, or just dnsdist...
-if [ `ls /etc/routedns | wc -l` -eq 0 ]; then 
+if [ `ls /etc/routedns | wc -l` -eq 0 ]; then
         # No files - start dnsdist only...
         dnsdist -C /etc/dnsdist/dnsdist.conf --supervised $advlog
-else    
+else
         # Files found - start dnsdist (background) and routedns
         dnsdist -C /etc/dnsdist/dnsdist.conf --supervised $advlog &
         routedns /etc/routedns/*.toml
