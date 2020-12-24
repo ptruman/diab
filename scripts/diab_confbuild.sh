@@ -278,6 +278,7 @@ AllowedGoogle:add("client2.google.com")
 AllowedGoogle:add("client3.google.com")
 AllowedGoogle:add("client4.google.com")
 AllowedGoogle:add("client5.google.com")
+AllowedGoogle:add("connectivitycheck.gstatic.com")
 --
 EOF
         # Check for allowed external hosts
