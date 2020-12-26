@@ -1,7 +1,7 @@
 #!/bin/bash
 # DIAB Configuration Build Script
 # Set Version
-DV="1.6"
+DV="1.7"
 echo "# DIAB : INFO    : diab V$DV configurator starting..."
 # Check for existing config file...
 if [ -f "/etc/dnsdist/dnsdist.conf" ]; then
@@ -9,6 +9,12 @@ if [ -f "/etc/dnsdist/dnsdist.conf" ]; then
         echo "# DIAB : INFO    : Found existing /etc/dnsdist/dnsdist.conf - skipping config build"
         echo "# DIAB : WARNING : If you have changed Docker environment variables, they will not take effect as the existing file will be used."
 else
+        # Check for IPv6 
+        if [ $DIAB_ENABLE_IPV6 ]; then
+                if [ $DIAB_ENABLE_IPV6 -eq 1 ]; then
+                        IPV6=1
+                fi
+        fi
         # Get container IP
         ContainerIP=`awk 'END{print $1}' /etc/hosts`
         # Test for key variables
@@ -63,8 +69,11 @@ else
         cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- Create ACL to allow all access (assuming firewalls!)
 addACL('0.0.0.0/0')
---
 EOF
+        if [ $IPV6 -eq 1 ]; then
+                echo "addACL('::/0')" >> /etc/dnsdist/dnsdist.conf
+        fi
+        echo "--" >> /etc/dnsdist/dnsdist.conf
         # Check for/enable the webserver
         if [ $DIAB_ENABLE_WEBSERVER ]; then
                 if [ $DIAB_ENABLE_WEBSERVER -eq 1 ]; then
@@ -88,12 +97,15 @@ EOF
         # Check for/enable base DNS...
         if [ $DIAB_ENABLE_DNS ]; then
                 if [ $DIAB_ENABLE_DNS -eq 1 ]; then
-                echo "# DIAB : INFO    : DIAB_ENABLE_DNS is set.  Enabling basic DNS at $ContainerIP:53"
-                cat << EOF >> /etc/dnsdist/dnsdist.conf
+                        echo "# DIAB : INFO    : DIAB_ENABLE_DNS is set.  Enabling basic DNS at $ContainerIP:53"
+                        cat << EOF >> /etc/dnsdist/dnsdist.conf
 -- add basic DNS
 addLocal('0.0.0.0:53', { reusePort=true })
---
 EOF
+                        if [ $IPV6 -eq 1 ]; then
+                                echo "addLocal('[::]:53'" >> /etc/dnsdist/dnsdist.conf
+                        fi
+                        echo "--" >> /etc/dnsdist/dnsdist.conf
                 fi
         fi
         # Check for/enable DoT...
@@ -108,8 +120,11 @@ EOF
 -- Includes path for certs in /ssl and bind on all interfaces
 -- By default listens on port 853.
 addTLSLocal("0.0.0.0", "/ssl/cert.pem", "/ssl/key.pem", { doTCP=true, reusePort=true, tcpFastOpenSize=64 })
---
 EOF
+                                if [ $IPV6 -eq 1 ]; then
+                                        echo "addTLSLocal(\"[::]\", \"/ssl/cert.pem\", \"/ssl/key.pem\", { doTCP=true, reusePort=true, tcpFastOpenSize=64 })" >> /etc/dnsdist/dnsdist.conf
+                                fi
+                                echo "--" >> /etc/dnsdist/dnsdist.conf
                         else
                                 echo "# DIAB : WARNING : DIAB_ENABLE_DOT is set but /ssl files are missing. Cannot start DoT".
                         fi
@@ -128,8 +143,11 @@ EOF
 -- Includes path for certs in /ssl and bind on all interfces
 -- By default listens on port 443
 addDOHLocal("0.0.0.0", "/ssl/cert.pem", "/ssl/key.pem", "/dns-query", { doTCP=true, reusePort=true, tcpFastOpenSize=64, trustForwardedForHeader=true })
---
 EOF
+                                if [ $IPV6 -eq 1 ]; then
+                                        echo "addDOHLocal(\"[::]\", \"/ssl/cert.pem\", \"/ssl/key.pem\", \"/dns-query\", { doTCP=true, reusePort=true, tcpFastOpenSize=64, trustForwardedForHeader=true })" >> /etc/dnsdist/dnsdist.conf
+                                fi
+                                echo "--" >> /etc/dnsdist/dnsdist.conf
                         else
                                 echo "# DIAB : WARNING : SSL files NOT found - only able to enable DoH insecure server"
                         fi
@@ -140,8 +158,10 @@ EOF
 -- Listening on port 8053
 -- NB : Since the DoH queries are simple HTTPS requests, the server can be hidden behind Nginx or HAproxy
 addDOHLocal("0.0.0.0:8053", nil, nil, "/dns-query", { reusePort=true, trustForwardedForHeader=true })
---
-EOF
+                        if [ $IPV6 -eq 1 ]; then
+                                echo "addDOHLocal("[::]:8053", nil, nil, "/dns-query", { reusePort=true, trustForwardedForHeader=true })" >> /etc/dnsdist/dnsdist.conf
+                        fi
+                        echo "--" >> /etc/dnsdist/dnsdist.conf
                 fi
         fi
         # Add general configuration
@@ -217,8 +237,11 @@ protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
                                         cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="127.0.0.1:900$WorkingCount",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
+newServer({address="0.0.0.0:900$WorkingCount",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
 EOF
+                                        if [ $IPV6 -eq 1 ]; then
+                                                echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",useClientSubnet=true$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
+                                        fi
                                 fi
                                 Identified=1
                         fi
@@ -248,8 +271,11 @@ protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
                                         cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="127.0.0.1:900$WorkingCount",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
+newServer({address="0.0.0.0:900$WorkingCount",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
 EOF
+                                        if [ $IPV6 -eq 1 ]; then
+                                                echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",useClientSubnet=true$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
+                                        fi
                                 fi
                                 Identified=1
                         fi
@@ -410,6 +436,9 @@ EOF
                         secureKey=`echo "makeKey()" | dnsdist -l 127.0.0.1:999 | tail -1`
                         echo "-- Enable CLI access" >> /etc/dnsdist/dnsdist.conf
                         echo "controlSocket('127.0.0.1:5199')" >> /etc/dnsdist/dnsdist.conf
+                        if [ $IPV6 -eq 1 ]; then
+                                echo "controlSocket('[::1]:5199')" >> /etc/dnsdist/dnsdist.conf
+                        fi
                         echo $secureKey >> /etc/dnsdist/dnsdist.conf
                 fi
         fi
