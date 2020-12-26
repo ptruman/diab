@@ -158,6 +158,7 @@ EOF
 -- Listening on port 8053
 -- NB : Since the DoH queries are simple HTTPS requests, the server can be hidden behind Nginx or HAproxy
 addDOHLocal("0.0.0.0:8053", nil, nil, "/dns-query", { reusePort=true, trustForwardedForHeader=true })
+EOF
                         if [ $IPV6 -eq 1 ]; then
                                 echo "addDOHLocal("[::]:8053", nil, nil, "/dns-query", { reusePort=true, trustForwardedForHeader=true })" >> /etc/dnsdist/dnsdist.conf
                         fi
