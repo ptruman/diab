@@ -1,7 +1,7 @@
 #!/bin/bash
 # DIAB Configuration Build Script
 # Set Version
-DV="1.7"
+DV="1.8"
 echo "# DIAB : INFO    : diab V$DV configurator starting..."
 # Check for existing config file...
 if [ -f "/etc/dnsdist/dnsdist.conf" ]; then
@@ -194,6 +194,14 @@ EOF
                 # None found - leave default (1 second)
                 IntervalInsertion=""
         fi
+        # Check for inbound privacy
+        if [ $DIAB_ENABLE_INBOUND_PRIVACY ]; then
+                if [ $DIAB_ENABLE_INBOUND_PRIVACY -eq 1 ]
+                        UCSInsertion="useClientSubnet=false"
+                else
+                        UCSInsertion="useClientSubnet=true"
+                fi
+        fi
         # Process and add specified DIAB_UPSTREAM_IP_AND_PORT values
         echo "-- Backend DNS servers" >> /etc/dnsdist/dnsdist.conf
         Working=`echo $DIAB_UPSTREAM_IP_AND_PORT | sed "s/ //g"`
@@ -224,6 +232,15 @@ address = "$i{?dns}"
 protocol = "doh"
 EOF
                                 fi
+                                if [ $DIAB_ENABLE_OUTBOUND_PRIVACY ]; then
+                                        if [ $DIAB_ENABLE_OUTBOUND_PRIVACY -eq 1 ]; then
+                                                cat << EOF >> /etc/routedns/resolvers.toml
+ecs-op = "privacy"
+ecs-prefix4 = 16
+ecs-prefix6 = 64
+EOF                                                
+                                        fi
+                                fi
                                 if [ $CreateRouteDNSResolvers -eq 1 ]; then
                                         echo "# DIAB : INFO    : Building routedns resolver config for $i (DoH)"
                                         cat << EOF >> /etc/routedns/listeners.toml
@@ -238,10 +255,10 @@ protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
                                         cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="0.0.0.0:900$WorkingCount",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
+newServer({address="0.0.0.0:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
 EOF
                                         if [ $IPV6 -eq 1 ]; then
-                                                echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",useClientSubnet=true$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
+                                                echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
                                         fi
                                 fi
                                 Identified=1
@@ -258,6 +275,15 @@ address = "$i"
 protocol = "dot"
 EOF
                                 fi
+                                if [ $DIAB_ENABLE_OUTBOUND_PRIVACY ]; then
+                                        if [ $DIAB_ENABLE_OUTBOUND_PRIVACY -eq 1 ]; then
+                                                cat << EOF >> /etc/routedns/resolvers.toml
+ecs-op = "privacy"
+ecs-prefix4 = 16
+ecs-prefix6 = 64
+EOF                                                
+                                        fi
+                                fi
                                 if [ $CreateRouteDNSResolvers -eq 1 ]; then
                                         echo "# DIAB : INFO    : Building routedns resolver config for $i (DoT)"
                                         cat << EOF >> /etc/routedns/listeners.toml
@@ -272,10 +298,10 @@ protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
                                         cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="0.0.0.0:900$WorkingCount",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
+newServer({address="0.0.0.0:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
 EOF
                                         if [ $IPV6 -eq 1 ]; then
-                                                echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",useClientSubnet=true$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
+                                                echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",$UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
                                         fi
                                 fi
                                 Identified=1
@@ -285,7 +311,7 @@ EOF
                         echo "# DIAB : INFO    : $i appears to be a plain old DNS server"
                         if [ $Identified -eq 0 ]; then
                                 cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="$i",name="$USN",useClientSubnet=true$IntervalInsertion,order=$TempCount})
+newServer({address="$i",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
 EOF
                                 Identified=1
                         fi
