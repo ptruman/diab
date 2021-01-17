@@ -16,7 +16,9 @@ Normal DNS queries are sent "plaintext" - meaning anyone or anything (person or 
 
 DNS-over-HTTPS (DoH) and DNS-over-TLS (DoT) and DNSCrypt have been created to allow encryption of DNS queries so that requests can be encrypted - so only your device(s) and your DNS server of choice know what you requested, until an actual connection is initiated. Traffic inspection can still show IP addresses, although with the declining IPv4 address space and prevalance of virtual hosting, IP addresses are not a guarantee of which sites may be connected to - but SNI can still reveal which site was requested.
 
-DNS encryption combined with ESNI makes things a bit better, and *diab* is here to assist with the former....
+Additionally, EDNS can reveal the IP of an originating machine, even to intermediate DNS servers.
+
+DNS encryption combined with ESNI makes things a bit better, and *diab* is here to assist with the rest....
 
 ## The use case
 
@@ -32,8 +34,8 @@ The assumption is that you already (or want to):
 -- You may already have piHole (or other DNS tool) configured to securely talk to another DNS service, i.e. OpenDNS via DNSCrypt
 - Run your own VPN (i.e. WireGuard) to secure your mobile device traffic (which means access to your piHole server when roaming!)
 -- You want to use the "Always-On" and "Block connections without VPN" options on your mobile
-- *Don't* want to operate a "public" facing DNS service, that you need to connect to your VPN....
-- *Don't* want a mobile device to report "No internet connection" when using restricted DNS
+- *Don't* want to make your DNS/piHole "public" facing (anyone might find/use it!)
+- Just make it all look seamless!
 
 If you want to setup your own Linux, OMV, Docker, Traefik and piHole box - read our article [https://site.gothtech.co.uk/articles/omv-portainer-traefik-letsencrypt](here).
 
@@ -43,34 +45,36 @@ If you want to setup WireGuard for the above setup - read our article [https://s
 
 Firefox supports DoH, and (unless you switch it off) might start using it with DNS servers you can't control (i.e. bypassing your DNS).  You can't block port 443 outbound, as you'd block all secure web traffic...it's a blessing *and* a curse.
 
-Chrome (and Android) support DoT (which uses TCP port 853, thus *can* be blocked) - but *only* if the specified DNS host offers an unencrypted service also, which means most people wont get it locally on the same IP as their DNS server - and piHole doesn't provide DoT...
+Chrome (and Android) support DoT (which uses TCP port 853, thus *can* be blocked) - but *only* if the specified DNS host offers an unencrypted service also, which means most people wont get it locally on the same IP as their DNS server - and piHole doesn't provide DoT (yet)...
 
-### Make sense?
+### Making sense?
 
 As an example, the author runs a Linux box running OpenMediaVault, running Docker.  Docker is hosting:
 - a piHole container to provide DNS (with adblocking) to the LAN
 - a WireGuard container to provide a VPN "back to the LAN" when roaming away from home WiFi (also enabling piHole adblock coverage when roaming)
--- piHole is configured to use a DNSCrypt (with DNSSEC) connection to an external filter (OpenDNS).  
+-- piHole is configured to use an upstream DNSCrypt (with DNSSEC) connection to an external filter (OpenDNS).  
 - a Traefik container for a variety of things, but it handles dynamic SSL certificate provision
 
-However, the author's ideal is to ensure Android's new "Always-On" and "Block connections without VPN" settings are "on" - and that "Private DNS" is always set to a trusted host (i.e. the author's own).
+However, the author's ideal is to ensure Android's new "Always-On" and "Block connections without VPN" settings are "on" - and that "Private DNS" is always set to a trusted host (i.e. the author's own) *without* making that Private DNS service accessible to anyone else.
 
 You might at this point think "*Hang on, won't WireGuard be encrypting the DNS traffic to piHole, and DNScrypt encrypting all the outgoing queries?*" - and you'd partially be right...*however*:
 
-1) WireGuard needs a hostname or IP to connect to.  The author's IP is dynamic - so Dynamic DNS is in use to update a known hostname for WireGuard to connect to
-2) WireGuard needs access to DNS to lookup the hostname, which it *must* do before it can connect.
-3) The only way to set DNS in Android is either)
+1. WireGuard needs a hostname or IP to connect to.  The author's IP is dynamic - so Dynamic DNS is in use to update a known hostname for WireGuard to connect to
+2. WireGuard needs access to (plain old) DNS to lookup the hostname, which it *must* do before it can connect.  
+3. The only way to set DNS in Android is either)
 -- in WiFi settings ('standard' DNS only, i.e. *not* encrypted) or
 -- use Private DNS
-4) "Private DNS" on Android has 3 options - "Off", "Automatic" or a user provided hostname can be forced
+4. "Private DNS" on Android has 3 options - "Off", "Automatic" or a user provided hostname can be forced
 -- If "Off" is set, plaintext DNS will be used
 -- If "Automatic" is used, Android  will connect to a user provided hostname (if provided) or any it can 'find' (which may not be yours, i.e. Google or QuadDNS) - even if WireGuard later overrides it
 -- If you force a user provided hostname, Android will ONLY use secure DNS to lookup WireGuard
-7) Thus you need to provide a secure DNS server for your initial connection. You *could* use an external service, but skips piHole etc...and...
-8) You probably don't want any secure DNS server you provide to be publically available but....
-9) Your roaming (cellular) IP will change frequently - so you can't firewall it to check clients before WireGuard has connected
-10) Even once WireGuard connects, "Private DNS" will still be used - so it needs to be resolvable/accessible internally *and* externally
-11) piHole doesn't offer DoT, so you can't just point at a piHole IP...
+7. Thus you *ideally* need to provide a secure DNS server for your initial connection. You *could* use an external service, but...
+-- that wouldn't be *yours*
+-- it would skip your piHole etc...and...
+8. You *certainly* don't want any secure DNS server you provide to be publically available but....
+9. Your roaming (cellular device) IP will change frequently - so you can't firewall it to check clients before WireGuard has connected
+10. Even once WireGuard connects, "Private DNS" will still be used - so it needs to be resolvable/accessible internally *and* externally
+11. piHole doesn't offer DoT, so you can't just point at a piHole IP...(even if you could, it doesn't authenticate you...)
 
 ## The solution
 
@@ -83,16 +87,31 @@ Running as a Docker container on a macvlan interface (i.e. with it's own LAN IP)
 1) Standard (plaintext) DNS - *internally only* - forwarded to a DNS service of your choice
 2) DoH - internally *and* externally - forwarded to a DNS service of your choice
 3) DoT - internally *and* externally - forwarded to a DNS service of your choice (enabling "Private DNS" on Android)
+4) EDNS manipulation (passthrough to an upstream server, or not...)
 
 The assumption here is that the "DNS service of your choice" is already configured (i.e. piHole, or another DoT/DoH/DNSCrypt proxy to an external DNS). *diab* will just continue plugging into that - so all you need to do is change your DNS IP/host to the new *diab* IP.  If you're using piHole *as* your DNS - don't worry, we cover that further down...
 
-Whilst *diab* will be externally available (via DoT, if you want "Private DNS" and/or DoH) - it will *only* respond to queries it is allowed to.  It will reject queries for anything else it's not setup to answer - so whilst it's not "firewalled", it's not useful to anyone else.  
+Whilst *diab* will be externally available (via DoT, if you want "Private DNS" and/or DoH) - it will *only* respond to queries it is allowed to.  It will reject *external* queries for anything else it's not setup to answer - so whilst it's not "firewalled", it's not useful to anyone else.  
 
-By default, it will allow Android mobile devices to resolve *client1-5.google.com* and *connectivitycheck.gstatic.com* - to prevent any device using it for Private DNS from displaying "offline" or "no internet" alerts.
+By default, it will allow Android mobile devices to resolve *client1-5.google.com* and *connectivitycheck.gstatic.com* - to prevent any device using it for Private DNS from displaying "offline" or "no internet" alerts, which you don't want when booting up.
 
-Over and above that, you can allow then certain addresses on your domain to respond - i.e. WireGuard.  
+Over and above that, you can allow then certain addresses on your domain to respond - i.e. WireGuard.
+
+So - let's run the above example through:
+1. Your mobile device is configured to use Wireguard, "Always On" and "Block Connections without VPN"
+2. Your mobile device is set to use your Private DNS - using diab.
+3. Your mobile device boots up, away from home (using 3G/4G/5G cellular connectivity) and uses the operator DNS to resolve your Private DNS server (plaintext)
+4. Your WireGuard client then requests to resolve it's hostname, via Private DNS
+5. *diab* sees an *external* (untrusted) request, but it's for your wireguard hostname, which is allowed, so it returns it
+6. WireGuard is able to connect
+7. WireGuard is told to use your (internal) diab IP address for DNS
+8. *diab* now sees all queries (from WireGuard) as *internal*, and therefore trusted
+9. If your mobile attempts a connectivity check before WireGuard comes up, *diab* allows those (so you get no errors)
+10. If anyone does find your IP responding on DNS/DoH/DoT ports, Traefik filters should silently drop them unless the hostname (SNI) matches
+11. If anyone uses the correct SNI will be seen as untrusted, and the queries will fail.
 
 **RECENTLY ADDED :** Addition of routeDNS within *diab* to enable connection **to** DoH or DoT servers (via routedns)<br/>
+**RECENTLY ADDED :** EDNS configurability<br/>
 **COMING SOON :** Switching failover - currently *diab* will talk to the FIRST server ONLY unless it's down, then the second.  This will be optional in future)
 
 # Configuration
@@ -115,7 +134,9 @@ Over and above that, you can allow then certain addresses on your domain to resp
 * **DIAB_ENABLE_DOT** - Set this to **1** to enable DoT. It will run on 0.0.0.0:853 - and **requires** /ssl/cert.pem and /ssl/key.pem to be available via the /ssl bind mount volume above.
 * **DIAB_ENABLE_DOH** - Set this to **1** to enable DoT. It will run on 0.0.0.0:443 - and **requires** /ssl/cert.pem and /ssl/key.pem to be available via the /ssl bind mount volume above.
 ** It will *also* enable an "insecure" DOH server on 0.0.0.0:8053 - which you can use with Traefik, nginx or HAproxy (see below)
-* **DIAB_ALLOWED_EXTERNALLY** - Set this to a comma separated list of hostnames you want untrusted hosts to be able to resolve.  One should be your WireGuard hostname (i.e. *vpn.yoursubdomain.yourdomain.com*)
+* **DIAB_ENABLE_INBOUND_PRIVACY** - Set this to **1** to prevent *diab* passing EDNS info to your UPSTREAM servers (i.e. piHole).  If you are using piHole and want client identification to work, you need to set this to 0, or just not set it (default is **0**)
+* **DIAB_ENABLE_OUTBOUND_PRIVACY** - Set this to **1** to prevent *diab* passing EDNS info to any UPSTREAM DoH/DoT servers (via routedns) (default is **0**)
+* **DIAB_ALLOWED_EXTERNALLY** - Set this to a comma separated list of hostnames you want untrusted hosts to be able to resolve.  **One should be your WireGuard hostname** (i.e. *vpn.yoursubdomain.yourdomain.com*)
 * **DIAB_ENABLE_LOGGING** - Set this to **1** to enable textual messages in the Docker logs/stdout
 * **DIAB_ENABLE_ADVANCED_LOGGING** - Set this to **1** to enable verbose messaging from dnsdist itself
 * **DIAB_ENABLE_WEBSERVER** - Set this to **1** to enable the dnsdist webserver.  It will run on 0.0.0.0:8083
