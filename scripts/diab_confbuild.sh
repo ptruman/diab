@@ -238,7 +238,7 @@ EOF
 ecs-op = "privacy"
 ecs-prefix4 = 16
 ecs-prefix6 = 64
-EOF                                                
+EOF
                                         fi
                                 fi
                                 if [ $CreateRouteDNSResolvers -eq 1 ]; then
@@ -281,7 +281,7 @@ EOF
 ecs-op = "privacy"
 ecs-prefix4 = 16
 ecs-prefix6 = 64
-EOF                                                
+EOF
                                         fi
                                 fi
                                 if [ $CreateRouteDNSResolvers -eq 1 ]; then
