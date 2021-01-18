@@ -196,7 +196,7 @@ EOF
         fi
         # Check for inbound privacy
         if [ $DIAB_ENABLE_INBOUND_PRIVACY ]; then
-                if [ $DIAB_ENABLE_INBOUND_PRIVACY -eq 1 ]
+                if [ $DIAB_ENABLE_INBOUND_PRIVACY -eq 1 ]; then
                         UCSInsertion="useClientSubnet=false"
                 else
                         UCSInsertion="useClientSubnet=true"
