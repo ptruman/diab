@@ -15,7 +15,7 @@ RUN apt-get install -y libboost-dev lua5.3 libedit-dev libsodium-dev ragel libto
 # Build ROUTEDNS (to be used for egress capabilities)
 RUN GO111MODULE=on /tmp/go/bin/go get -v github.com/folbricht/routedns/cmd/routedns && chown -R root:root ./go
 # Build (statically) with DNSCrypt, DoT, DoH support, plus dnstab, protobuf, re2, SNMP and some sanitisation
-WORKDIR /tmp/dnsdist-1.6.0
+WORKDIR /tmp/dnsdist-1.6.0-alpha1
 RUN ./configure  --enable-dnscrypt --enable-static --enable-dns-over-tls --enable-dns-over-https --enable-dnstap  --enable-asan --enable-lsan --enable-ubsan --with-protobuf --with-re2 --with-net-snmp
 # Compile!
 RUN make install
