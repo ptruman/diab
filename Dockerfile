@@ -16,7 +16,8 @@ RUN apt-get install -y libboost-dev lua5.3 libedit-dev libsodium-dev ragel libto
 RUN GO111MODULE=on /tmp/go/bin/go get -v github.com/folbricht/routedns/cmd/routedns && chown -R root:root ./go
 # Build (statically) with DNSCrypt, DoT, DoH support, plus dnstab, protobuf, re2, SNMP and some sanitisation
 WORKDIR /tmp/dnsdist-1.6.0-alpha1
-RUN ./configure  --enable-dnscrypt --enable-static --enable-dns-over-tls --enable-dns-over-https --enable-dnstap  --enable-asan --enable-lsan --enable-ubsan --with-protobuf --with-re2 --with-net-snmp
+# --enable-asan
+RUN ./configure  --enable-dnscrypt --enable-static --enable-dns-over-tls --enable-dns-over-https --enable-dnstap --enable-lsan --enable-ubsan --with-protobuf --with-re2 --with-net-snmp
 # Compile!
 RUN make install
 # RUN rm -rf /tmp/dnsdist-1.5.0
@@ -28,6 +29,9 @@ FROM bitnami/minideb:latest
 # COPY BINARIES FROM THE BUILD IMAGE
 COPY --from=dnsdistbuild /usr/local/bin/dnsdist /usr/local/bin/dnsdist
 COPY --from=dnsdistbuild /root/go/bin/routedns /usr/local/bin/routedns
+RUN echo 199.232.58.132          deb.debian.org >> /etc/hosts
+RUN cat /etc/resolv.conf
+RUN cat /etc/hosts
 RUN apt-get update && apt-get upgrade && apt-get install -y apt-utils libasan5 liblua5.3-0 libedit2 libsodium23 libfstrm0 libsnmp30 libcdb1 libre2-5 liblmdb0 libh2o-evloop0.13 libprotobuf-dev libubsan1 ca-certificates
 COPY ./scripts/diab_confbuild.sh /usr/sbin/diab_confbuild.sh
 COPY ./scripts/diab_startup.sh /usr/sbin/diab_startup.sh

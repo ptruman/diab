@@ -1,10 +1,22 @@
 #!/bin/bash
 # DIAB Configuration Build Script
 # Set Version
-DV="1.8"
+DV="2.0"
 echo "# DIAB : INFO    : diab V$DV configurator starting..."
-# Check for existing config file...
-if [ -f "/etc/dnsdist/dnsdist.conf" ]; then
+# Check for CLI parameters
+if [ $1 ]; then
+	if [ $1 == "OVERRIDE" ]; then
+		OVERRIDE=1
+		echo "# DIAB : INFO    : OVERRIDE specified - forcibly recreating configuration..."
+		rm -rf /etc/dnsdist/dnsdist.conf
+	else
+		OVERRIDE=0
+	fi
+else
+	OVERRIDE=0
+fi
+# Check for existing config file or override flag
+if [ -f "/etc/dnsdist/dnsdist.conf" ] && [ $OVERRIDE -eq 0 ]; then
         # Config present - do nothing
         echo "# DIAB : INFO    : Found existing /etc/dnsdist/dnsdist.conf - skipping config build"
         echo "# DIAB : WARNING : If you have changed Docker environment variables, they will not take effect as the existing file will be used."
@@ -13,8 +25,12 @@ else
         if [ $DIAB_ENABLE_IPV6 ]; then
                 if [ $DIAB_ENABLE_IPV6 -eq 1 ]; then
                         IPV6=1
-                fi
-        fi
+                else
+			IPV6=0
+		fi
+        else
+		IPV6=0
+	fi
         # Get container IP
         ContainerIP=`awk 'END{print $1}' /etc/hosts`
         # Test for key variables
@@ -74,6 +90,15 @@ EOF
                 echo "addACL('::/0')" >> /etc/dnsdist/dnsdist.conf
         fi
         echo "--" >> /etc/dnsdist/dnsdist.conf
+	# Check for queue and drop counts
+	if [ -f $DIAB_MAX_DROPS ]; then
+		echo "# DIAB : INFO    :  DIAB_MAX_DROPS not set - defaulting to 10"
+		export DIAB_MAX_DROPS=10
+	fi
+        if [ -f $DIAB_MAX_QUEUE ]; then
+                echo "# DIAB : INFO    :  DIAB_MAX_QUEUE not set - defaulting to 10"
+                export DIAB_MAX_QUEUE=10
+        fi
         # Check for/enable the webserver
         if [ $DIAB_ENABLE_WEBSERVER ]; then
                 if [ $DIAB_ENABLE_WEBSERVER -eq 1 ]; then
@@ -201,7 +226,10 @@ EOF
                 else
                         UCSInsertion="useClientSubnet=true"
                 fi
+	else
+		UCSInsertion="useClientSubnet=true"
         fi
+
         # Process and add specified DIAB_UPSTREAM_IP_AND_PORT values
         echo "-- Backend DNS servers" >> /etc/dnsdist/dnsdist.conf
         Working=`echo $DIAB_UPSTREAM_IP_AND_PORT | sed "s/ //g"`
@@ -407,27 +435,48 @@ function orderedLeastOutstanding(servers, dq)
         i = 1
         while servers[i] do
                 workingname = servers[i].name
+                -- Check for a counter of known server drops and set it
+                if not (_G[servers[i].name.."LastDropCount"]) then
+                        _G[servers[i].name.."LastDropCount"] = 0
+                end
+                if not (_G[servers[i].name.."LastQueueTime"]) then
+                        _G[servers[i].name.."LastQueueTime"] = os.time()
+                end
                 -- We only care if the server is currently up
                 if (servers[i].upStatus == true) then
                         -- server shows up (via healthcheck) but may not have been marked down...
                         -- test for drop flags and reset if required
                         if (servers[i]:isUp() == true) then
                                 -- server has NOT been marked down....
-                                --
-                                -- test for DROP COUNT here when ready...
-                                -- set drop flags once ready
-                                --
-                                -- Retrieve the order for the server
-                                order = servers[i].order
-                                -- Create table for this order if not existing
-                                if type(serverlist[order]) ~= "table" then
-                                        serverlist[order] = {}
-                                end
-                                -- Insert this server to the ordered table
-                                table.insert(serverlist[order], servers[i])
+                                -- check if server drop or queue count has increased?
+                                QueueCount=servers[i]:getOutstanding()
+                                DropCount=servers[i]:getDrops()
+                                CheckCount=_G[servers[i].name.."LastDropCount"] + $DIAB_MAX_DROPS
+				if (QueueCount > $DIAB_MAX_QUEUE) or (DropCount > CheckCount) then
+                                        -- Mark the server down and update last Queue count
+                                        Log("DNS server "..workingname.." has an increased drop count/queue - marking down")
+                                        servers[i]:setDown()
+                                        _G[servers[i].name.."LastQueueTime"] = os.time()
+                                        _G[servers[i].name.."LastDropCount"] = DropCount
+                                else
+                                        -- Keep the server in a pool
+                                        -- Retrieve the order for the server
+                                        order = servers[i].order
+                                        -- Create table for this order if not existing
+                                        if type(serverlist[order]) ~= "table" then
+                                                serverlist[order] = {}
+                                        end
+                                        -- Insert this server to the ordered table
+                                        table.insert(serverlist[order], servers[i])
+				end
                         else
-                                Log("DNS server "..workingname.." isUp is FALSE (marked DOWN).")
-                        end
+                                Log("DNS server "..workingname.." isUp is FALSE (forcibly marked DOWN).")
+                                CheckTime=_G[servers[i].name.."LastQueueTime"] + $DIAB_CHECKINTERVAL
+                                if (os.time() >= CheckTime) then
+                                        Log("DNS server "..workingname.." marked UP for retest...")
+                                        servers[i]:setUp()
+                                end
+			end
                 else
                         Log("DNS server "..workingname.." upStatus is FALSE (healthcheck failed).")
                 end
@@ -453,8 +502,14 @@ function orderedLeastOutstanding(servers, dq)
         -- Return the lowest ordered server list to the leastOutstanding function
         return leastOutstanding.policy(serverlist[lowest], dq)
 end
+EOF
+	if [ $DIAB_ENABLE_STRICT_ORDER ]; then
+		if [ $DIAB_ENABLE_STRICT_ORDER -eq 1 ]; then
+			cat << EOF >> /etc/dnsdist/dnsdist.conf
 setServerPolicyLua("orderedLeastOutstanding", orderedLeastOutstanding)
 EOF
+		fi
+	fi
         if [ $DIAB_ENABLE_CLI ]; then
                 if [ $DIAB_ENABLE_CLI -eq 1 ]; then
                         echo "# DIAB : INFO    : Enabling CLI access on port 5199..."

@@ -4,7 +4,16 @@ echo "#"
 echo "# DIAB : INFO    : Attempting to start diab..."
 # Run the configurator....
 echo "# DIAB : INFO    : Launching diab configurator..."
-/usr/sbin/diab_confbuild.sh
+# Check for override...
+if [ $DIAB_FORCEREBUILD ]; then
+	if [ $DIAB_FORCEREBUILD -eq 1 ]; then
+		/usr/sbin/diab_confbuild.sh OVERRIDE
+	else
+		/usr/sbin/diab_confbuild.sh
+	fi
+else
+	/usr/sbin/diab_confbuild.sh
+fi
 # Check for/enable advanced logging
 if [ $DIAB_ENABLE_ADVANCED_LOGGING ]; then
         if [ $DIAB_ENABLE_ADVANCED_LOGGING -eq 1 ]; then
