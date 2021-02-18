@@ -21,7 +21,7 @@ if [ -f "/etc/dnsdist/dnsdist.conf" ] && [ $OVERRIDE -eq 0 ]; then
         echo "# DIAB : INFO    : Found existing /etc/dnsdist/dnsdist.conf - skipping config build"
         echo "# DIAB : WARNING : If you have changed Docker environment variables, they will not take effect as the existing file will be used."
 else
-        # Check for IPv6 
+        # Check for IPv6
         if [ $DIAB_ENABLE_IPV6 ]; then
                 if [ $DIAB_ENABLE_IPV6 -eq 1 ]; then
                         IPV6=1
@@ -53,7 +53,7 @@ else
         # Create the config folders if not present...
         mkdir -p /etc/dnsdist
         mkdir -p /etc/routedns
-        if [ -f "/etc/routedns/listeners.toml" ] && [ $OVERRIDE eq 0 ]; then
+        if [ -f "/etc/routedns/listeners.toml" ] && [ $OVERRIDE -eq 0 ]; then
                 echo "# DIAB : INFO    : Found existing /etc/routedns/listeners.toml - skipping blank creation"
                 CreateRouteDNSListeners=0
         else
@@ -61,7 +61,7 @@ else
                 CreateRouteDNSListeners=1
                 echo > /etc/routedns/listeners.toml
         fi
-        if [ -f "/etc/routedns/resolvers.toml" ] && [ $OVERRIDE eq 0 ]; then
+        if [ -f "/etc/routedns/resolvers.toml" ] && [ $OVERRIDE -eq 0 ]; then
                 echo "# DIAB : INFO    : Found existing /etc/routedns/resolvers.toml - skipping blank creation"
                 CreateRouteDNSResolvers=0
         else
