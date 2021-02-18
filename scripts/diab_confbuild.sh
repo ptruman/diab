@@ -21,7 +21,7 @@ if [ -f "/etc/dnsdist/dnsdist.conf" ] && [ $OVERRIDE -eq 0 ]; then
         echo "# DIAB : INFO    : Found existing /etc/dnsdist/dnsdist.conf - skipping config build"
         echo "# DIAB : WARNING : If you have changed Docker environment variables, they will not take effect as the existing file will be used."
 else
-        # Check for IPv6
+        # Check for IPv6 
         if [ $DIAB_ENABLE_IPV6 ]; then
                 if [ $DIAB_ENABLE_IPV6 -eq 1 ]; then
                         IPV6=1
@@ -53,7 +53,7 @@ else
         # Create the config folders if not present...
         mkdir -p /etc/dnsdist
         mkdir -p /etc/routedns
-        if [ -f "/etc/routedns/listeners.toml" ]; then
+        if [ -f "/etc/routedns/listeners.toml" ] && [ $OVERRIDE eq 0 ]; then
                 echo "# DIAB : INFO    : Found existing /etc/routedns/listeners.toml - skipping blank creation"
                 CreateRouteDNSListeners=0
         else
@@ -61,7 +61,7 @@ else
                 CreateRouteDNSListeners=1
                 echo > /etc/routedns/listeners.toml
         fi
-        if [ -f "/etc/routedns/resolvers.toml" ]; then
+        if [ -f "/etc/routedns/resolvers.toml" ] && [ $OVERRIDE eq 0 ]; then
                 echo "# DIAB : INFO    : Found existing /etc/routedns/resolvers.toml - skipping blank creation"
                 CreateRouteDNSResolvers=0
         else
@@ -115,8 +115,7 @@ EOF
                                 echo "# DIAB : INFO    : Generated DIAB_WEB_APIKEY as $DIAB_WEB_APIKEY"
                         fi
                         # Write webserver configuration
-                        echo "webserver(\"0.0.0.0:8083\")" >> /etc/dnsdist/dnsdist.conf
-			echo "setWebserverConfig({password=\"$DIAB_WEB_PASSWORD\", apiKey=\"$DIAB_WEB_APIKEY\", acl=\"$DIAB_TRUSTED_LANS\"})" >> /etc/dnsdist/dnsdist.conf
+                        echo "webserver(\"0.0.0.0:8083\", \"$DIAB_WEB_PASSWORD\", \"$DIAB_WEB_APIKEY\", {}, \"$DIAB_TRUSTED_LANS\")" >> /etc/dnsdist/dnsdist.conf
                         echo "# DIAB : INFO    : Webserver will be accessible at http://$ContainerIP:8083"
                 fi
         fi
@@ -274,17 +273,17 @@ EOF
                                         echo "# DIAB : INFO    : Building routedns resolver config for $i (DoH)"
                                         cat << EOF >> /etc/routedns/listeners.toml
 [listeners.routedns$WorkingCount-udp]
-address = ":900$WorkingCount"
+address = "127.0.0.1:900$WorkingCount"
 protocol = "udp"
 resolver = "routedns$WorkingCount"
 
 [listeners.routedns$WorkingCount-tcp]
-address = ":900$WorkingCount"
+address = "127.0.0.1:900$WorkingCount"
 protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
                                         cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="0.0.0.0:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
+newServer({address="127.0.0.1:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
 EOF
                                         if [ $IPV6 -eq 1 ]; then
                                                 echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
