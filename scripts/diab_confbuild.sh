@@ -21,7 +21,7 @@ if [ -f "/etc/dnsdist/dnsdist.conf" ] && [ $OVERRIDE -eq 0 ]; then
         echo "# DIAB : INFO    : Found existing /etc/dnsdist/dnsdist.conf - skipping config build"
         echo "# DIAB : WARNING : If you have changed Docker environment variables, they will not take effect as the existing file will be used."
 else
-        # Check for IPv6 
+        # Check for IPv6
         if [ $DIAB_ENABLE_IPV6 ]; then
                 if [ $DIAB_ENABLE_IPV6 -eq 1 ]; then
                         IPV6=1
@@ -115,7 +115,8 @@ EOF
                                 echo "# DIAB : INFO    : Generated DIAB_WEB_APIKEY as $DIAB_WEB_APIKEY"
                         fi
                         # Write webserver configuration
-                        echo "webserver(\"0.0.0.0:8083\", \"$DIAB_WEB_PASSWORD\", \"$DIAB_WEB_APIKEY\", {}, \"$DIAB_TRUSTED_LANS\")" >> /etc/dnsdist/dnsdist.conf
+                        echo "webserver(\"0.0.0.0:8083\")" >> /etc/dnsdist/dnsdist.conf
+			echo "setWebserverConfig({password=\"$DIAB_WEB_PASSWORD\", apiKey=\"$DIAB_WEB_APIKEY\", acl=\"$DIAB_TRUSTED_LANS\"})" >> /etc/dnsdist/dnsdist.conf
                         echo "# DIAB : INFO    : Webserver will be accessible at http://$ContainerIP:8083"
                 fi
         fi
