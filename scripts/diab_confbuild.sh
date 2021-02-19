@@ -3,7 +3,7 @@
 # Set Version
 DV="2.0"
 echo "# DIAB : INFO    : diab V$DV configurator starting..."
-# Check for CLI parameters
+# Check for CLI parameters (override)
 if [ $1 ]; then
 	if [ $1 == "OVERRIDE" ]; then
 		OVERRIDE=1
@@ -31,6 +31,16 @@ else
         else
 		IPV6=0
 	fi
+	# Check for intermediate settings
+	if [ $DIAB_OPEN_INTERMEDIATE ]; then
+		if [ $DIAB_OPEN_INTERMEDIATE -eq 1]; then
+			OPENINTERMEDIATE=1
+		else
+			OPENINTERMEDIATE=0
+		fi
+	else
+		OPENINTERMEDIATE=0
+	fi
         # Get container IP
         ContainerIP=`awk 'END{print $1}' /etc/hosts`
         # Test for key variables
@@ -53,6 +63,7 @@ else
         # Create the config folders if not present...
         mkdir -p /etc/dnsdist
         mkdir -p /etc/routedns
+	# Check for routedns files and override flag
         if [ -f "/etc/routedns/listeners.toml" ] && [ $OVERRIDE -eq 0 ]; then
                 echo "# DIAB : INFO    : Found existing /etc/routedns/listeners.toml - skipping blank creation"
                 CreateRouteDNSListeners=0
@@ -69,7 +80,7 @@ else
                 CreateRouteDNSResolvers=1
                 echo > /etc/routedns/resolvers.toml
         fi
-        # Start building the config file...
+        # Start building the dnsdist config file...
         # Check if Logging has been requested
         if [ $DIAB_ENABLE_LOGGING ]; then
                 if [ $DIAB_ENABLE_LOGGING -eq 1 ]; then
@@ -115,8 +126,13 @@ EOF
                                 echo "# DIAB : INFO    : Generated DIAB_WEB_APIKEY as $DIAB_WEB_APIKEY"
                         fi
                         # Write webserver configuration
-                        echo "webserver(\"0.0.0.0:8083\", \"$DIAB_WEB_PASSWORD\", \"$DIAB_WEB_APIKEY\", {}, \"$DIAB_TRUSTED_LANS\")" >> /etc/dnsdist/dnsdist.conf
-                        echo "# DIAB : INFO    : Webserver will be accessible at http://$ContainerIP:8083"
+                        echo "webserver(\"0.0.0.0:8083\")" >> /etc/dnsdist/dnsdist.conf
+			echo "# DIAB : INFO    : Webserver will be accessible at http://$ContainerIP:8083"
+			if [ $IPV6 -eq 1 ]; then
+				echo "webserver(\"::8083/0\")" >> /etc/dnsdist/dnsdist.conf
+			fi
+			echo "setWebserverConfig({password=\"$DIAB_WEB_PASSWORD\", apiKey=\"$DIAB_WEB_APIKEY\", acl=\"$DIAB_TRUSTED_LANS\"})" >> /etc/dnsdist/dnsdist.conf
+                        echo "# DIAB : INFO    : Webserver will also be available on IPV6 port 8083"
                 fi
         fi
         # Check for/enable base DNS...
@@ -249,6 +265,15 @@ EOF
                 #echo "Working SuffixA : $WorkingSuffixa"
                 #echo "Working SuffixB : $WorkingSuffixb"
                 #echo "USN = ${UpstreamName[$WorkingCount]}"
+
+                if [ $OPENINTERMEDIATE -eq 1 ] then
+                        V4INT="0.0.0.0:900"
+			V6TAIL="/0"
+                else
+                        V4INT="127.0.0.1:900"
+			V6TAIL="/1"
+                fi
+
                 if [ $WorkingPrefix == "https" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoH server"
                         if [ $Identified -eq 0 ]; then
@@ -258,7 +283,7 @@ EOF
 [resolvers.routedns$WorkingCount]
 address = "$i{?dns}"
 protocol = "doh"
-EOF
+EOF					fi
                                 fi
                                 if [ $DIAB_ENABLE_OUTBOUND_PRIVACY ]; then
                                         if [ $DIAB_ENABLE_OUTBOUND_PRIVACY -eq 1 ]; then
@@ -273,21 +298,35 @@ EOF
                                         echo "# DIAB : INFO    : Building routedns resolver config for $i (DoH)"
                                         cat << EOF >> /etc/routedns/listeners.toml
 [listeners.routedns$WorkingCount-udp]
-address = "127.0.0.1:900$WorkingCount"
+address = "$V4INT$WorkingCount"
 protocol = "udp"
 resolver = "routedns$WorkingCount"
 
 [listeners.routedns$WorkingCount-tcp]
-address = "127.0.0.1:900$WorkingCount"
+address = "$V4INT$WorkingCount"
 protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
+					if [ $IPV6 -eq 1 ] then
+	                                        cat << EOF >> /etc/routedns/resolvers.toml
+[listeners.routedns$WorkingCount-udp]
+address = "::900$WorkingCount/$V6TAIL"
+protocol = "udp"
+resolver = "routedns$WorkingCount"
+
+[listeners.routedns$WorkingCount-tcp]
+address = "::900$WorkingCount/$V6TAIL"
+protocol = "tcp"
+resolver = "routedns$WorkingCount"
+EOF
+					fi
+
                                         cat << EOF >> /etc/dnsdist/dnsdist.conf
 newServer({address="127.0.0.1:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
 EOF
-                                        if [ $IPV6 -eq 1 ]; then
-                                                echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
-                                        fi
+                                        # if [ $IPV6 -eq 1 ]; then
+                                        #         echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
+                                        # fi
                                 fi
                                 Identified=1
                         fi
@@ -316,21 +355,36 @@ EOF
                                         echo "# DIAB : INFO    : Building routedns resolver config for $i (DoT)"
                                         cat << EOF >> /etc/routedns/listeners.toml
 [listeners.routedns$WorkingCount-udp]
-address = ":900$WorkingCount"
+address = "$V4INT$WorkingCount"
 protocol = "udp"
 resolver = "routedns$WorkingCount"
 
 [listeners.routedns$WorkingCount-tcp]
-address = ":900$WorkingCount"
+address = "$V4INT$WorkingCount"
 protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
-                                        cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="0.0.0.0:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
+                                        if [ $IPV6 -eq 1 ] then
+                                                cat << EOF >> /etc/routedns/resolvers.toml
+[listeners.routedns$WorkingCount-udp]
+address = "::900$WorkingCount/$V6TAIL"
+protocol = "udp"
+resolver = "routedns$WorkingCount"
+
+[listeners.routedns$WorkingCount-tcp]
+address = "::900$WorkingCount/$V6TAIL"
+protocol = "tcp"
+resolver = "routedns$WorkingCount"
 EOF
-                                        if [ $IPV6 -eq 1 ]; then
-                                                echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",$UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
-                                        fi
+					fi
+
+
+                                        cat << EOF >> /etc/dnsdist/dnsdist.conf
+newServer({address="127.0.0.1:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
+EOF
+                                        # if [ $IPV6 -eq 1 ]; then
+                                        #         echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",$UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
+                                        # fi
                                 fi
                                 Identified=1
                         fi
