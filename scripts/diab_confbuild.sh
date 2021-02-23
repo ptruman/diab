@@ -25,15 +25,18 @@ else
         if [ $DIAB_ENABLE_IPV6 ]; then
                 if [ $DIAB_ENABLE_IPV6 -eq 1 ]; then
                         IPV6=1
+			DCIPV6=true
                 else
 			IPV6=0
+			DCIPV6=false
 		fi
         else
 		IPV6=0
+		DCIPV6=false
 	fi
 	# Check for intermediate settings
 	if [ $DIAB_OPEN_INTERMEDIATE ]; then
-		if [ $DIAB_OPEN_INTERMEDIATE -eq 1]; then
+		if [ $DIAB_OPEN_INTERMEDIATE -eq 1 ]; then
 			OPENINTERMEDIATE=1
 		else
 			OPENINTERMEDIATE=0
@@ -63,6 +66,7 @@ else
         # Create the config folders if not present...
         mkdir -p /etc/dnsdist
         mkdir -p /etc/routedns
+	mkdir -p /etc/dnscrypt
 	# Check for routedns files and override flag
         if [ -f "/etc/routedns/listeners.toml" ] && [ $OVERRIDE -eq 0 ]; then
                 echo "# DIAB : INFO    : Found existing /etc/routedns/listeners.toml - skipping blank creation"
@@ -80,6 +84,15 @@ else
                 CreateRouteDNSResolvers=1
                 echo > /etc/routedns/resolvers.toml
         fi
+	# Check for DNSCrypt files and override flag
+	if [ -f "/etc/dnscrypt/dnscrypt-proxy.toml" ] && [ $OVERRIDE -eq 0 ]; then
+                echo "# DIAB : INFO    : Found existing /etc/dnscrypt/dnscrypt-proxy.toml - skipping blank creation"
+		CreateDNSCryptListeners=0
+	else
+	echo "# DIAB : INFO    : No existing /etc/dnscrypt/dnscrypt-proxy.toml found - creating shell"
+                CreateDNSCryptListeners=1
+                echo > /etc/dnscrypt/dnscrypt-proxy.toml
+	fi
         # Start building the dnsdist config file...
         # Check if Logging has been requested
         if [ $DIAB_ENABLE_LOGGING ]; then
@@ -103,13 +116,23 @@ EOF
         echo "--" >> /etc/dnsdist/dnsdist.conf
 	# Check for queue and drop counts
 	if [ -f $DIAB_MAX_DROPS ]; then
-		echo "# DIAB : INFO    :  DIAB_MAX_DROPS not set - defaulting to 10"
+		echo "# DIAB : INFO    : DIAB_MAX_DROPS not set - defaulting to 10"
 		export DIAB_MAX_DROPS=10
 	fi
         if [ -f $DIAB_MAX_QUEUE ]; then
-                echo "# DIAB : INFO    :  DIAB_MAX_QUEUE not set - defaulting to 10"
+                echo "# DIAB : INFO    : DIAB_MAX_QUEUE not set - defaulting to 10"
                 export DIAB_MAX_QUEUE=10
         fi
+	if [ $DIAB_DNSSEC ]; then
+		if [ $DIAB_DNSSEC -eq 1 ]; then
+			echo " #DIAB : INFO    : DNSSEC requested"
+			$DNSSEC=true
+		else
+			$DNSSEC=false
+		fi
+	else
+		DNSSEC=false
+	fi
         # Check for/enable the webserver
         if [ $DIAB_ENABLE_WEBSERVER ]; then
                 if [ $DIAB_ENABLE_WEBSERVER -eq 1 ]; then
@@ -266,14 +289,117 @@ EOF
                 #echo "Working SuffixB : $WorkingSuffixb"
                 #echo "USN = ${UpstreamName[$WorkingCount]}"
 
-                if [ $OPENINTERMEDIATE -eq 1 ] then
+                if [ $OPENINTERMEDIATE -eq 1 ]; then
                         V4INT="0.0.0.0:900"
-			V6TAIL="/0"
+			V6TAIL="0"
                 else
                         V4INT="127.0.0.1:900"
-			V6TAIL="/1"
+			V6TAIL="1"
                 fi
 
+		if [ $WorkingPrefix == "sdns:" ]; then
+			echo "# DIAB : INFO    : $i appears to be a DNSCrypt server"
+			if [ $Identified -eq 0 ]; then
+				echo "# DIAB : INFO    : Building DNSCrypt listener config for $i (DNSCrypt)"
+                                DNSCryptListeners="listen_addresses = ['$V4INT$WorkingCount'"
+                                if [ $IPV6 -eq 1 ]; then
+                                        DNSCryptSuffix=", '[::$V6TAIL]:900$WorkingCount]']"
+                                else
+					DNSCryptSuffix="]"
+				fi
+                                DNSCryptListeners=$DNSCryptListeners$DNSCryptSuffix
+				cat << EOF >> /etc/dnscrypt/dnscrypt-proxy.toml
+##############################################
+#                                            #
+#        dnscrypt-proxy configuration        #
+#                                            #
+##############################################
+
+## This is an example configuration file.
+## Online documentation is available here: https://dnscrypt.info/doc
+
+##################################
+#         Global settings        #
+##################################
+
+## List of servers to use
+server_names = ['$USN']
+
+## List of local addresses and ports to listen to. Can be IPv4 and/or IPv6.
+## To only use systemd activation sockets, use an empty set: []
+$DNSCryptListeners
+
+## Maximum number of simultaneous client connections to accept
+max_clients = 250
+
+## Require servers (from static + remote sources) to satisfy specific properties
+# Use servers reachable over IPv4
+ipv4_servers = true
+
+# Use servers reachable over IPv6 -- Do not enable if you don't have IPv6 connectivity
+ipv6_servers = $DCIPV6
+
+# Use servers implementing the DNSCrypt protocol
+dnscrypt_servers = true
+
+# Server must support DNS security extensions (DNSSEC)
+require_dnssec = $DNSSEC
+
+## Always use TCP to connect to upstream servers
+force_tcp = false
+
+## How long a DNS query will wait for a response, in milliseconds
+timeout = 2500
+
+## Delay, in minutes, after which certificates are reloaded
+cert_refresh_delay = 240
+
+## Never try to use the system DNS settings; unconditionally use the
+## fallback resolver.
+ignore_system_dns = false
+
+## Automatic log files rotation
+# Maximum log files size in MB
+log_files_max_size = 10
+
+# How long to keep backup files, in days
+log_files_max_age = 7
+
+# Maximum log files backups to keep
+log_files_max_backups = 1
+
+# Disposition IPV6 queries
+block_ipv6 = $DCIPV6
+
+###########################
+#        DNS cache        #
+###########################
+
+## Enable a DNS cache to reduce latency and outgoing traffic
+cache = true
+
+## Cache size
+cache_size = 256
+
+## Minimum TTL for cached entries
+cache_min_ttl = 600
+
+## Maximum TTL for cached entries
+cache_max_ttl = 86400
+
+## TTL for negatively cached entries
+cache_neg_ttl = 60
+
+[static]
+        [static.'$USN']
+	        stamp = '$i'
+EOF
+                                cat << EOF >> /etc/dnsdist/dnsdist.conf
+newServer({address="127.0.0.1:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
+EOF
+				Identified=1
+			fi
+		fi
                 if [ $WorkingPrefix == "https" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoH server"
                         if [ $Identified -eq 0 ]; then
@@ -283,8 +409,8 @@ EOF
 [resolvers.routedns$WorkingCount]
 address = "$i{?dns}"
 protocol = "doh"
-EOF					fi
-                                fi
+EOF
+				fi
                                 if [ $DIAB_ENABLE_OUTBOUND_PRIVACY ]; then
                                         if [ $DIAB_ENABLE_OUTBOUND_PRIVACY -eq 1 ]; then
                                                 cat << EOF >> /etc/routedns/resolvers.toml
@@ -307,7 +433,7 @@ address = "$V4INT$WorkingCount"
 protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
-					if [ $IPV6 -eq 1 ] then
+					if [ $IPV6 -eq 1 ]; then
 	                                        cat << EOF >> /etc/routedns/resolvers.toml
 [listeners.routedns$WorkingCount-udp]
 address = "::900$WorkingCount/$V6TAIL"
@@ -315,18 +441,14 @@ protocol = "udp"
 resolver = "routedns$WorkingCount"
 
 [listeners.routedns$WorkingCount-tcp]
-address = "::900$WorkingCount/$V6TAIL"
+address = "::900$WorkingCount/V6TAIL"
 protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
 					fi
-
                                         cat << EOF >> /etc/dnsdist/dnsdist.conf
 newServer({address="127.0.0.1:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
 EOF
-                                        # if [ $IPV6 -eq 1 ]; then
-                                        #         echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
-                                        # fi
                                 fi
                                 Identified=1
                         fi
@@ -364,7 +486,7 @@ address = "$V4INT$WorkingCount"
 protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
-                                        if [ $IPV6 -eq 1 ] then
+                                        if [ $IPV6 -eq 1 ]; then
                                                 cat << EOF >> /etc/routedns/resolvers.toml
 [listeners.routedns$WorkingCount-udp]
 address = "::900$WorkingCount/$V6TAIL"

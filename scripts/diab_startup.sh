@@ -32,5 +32,6 @@ else
         # Files found - start dnsdist (background) and routedns
         echo "# DIAB : INFO    : Launching dnsdist and routedns..."
         dnsdist -C /etc/dnsdist/dnsdist.conf --supervised $advlog &
+	dnscrypt-proxy --config /etc/dnscrypt/dnscrypt-proxy.toml &
         routedns /etc/routedns/*.toml
 fi
