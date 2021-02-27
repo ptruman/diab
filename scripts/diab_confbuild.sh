@@ -397,8 +397,8 @@ EOF
                                 cat << EOF >> /etc/dnsdist/dnsdist.conf
 newServer({address="127.0.0.1:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
 EOF
-				Identified=1
 			fi
+			Identified=1
 		fi
                 if [ $WorkingPrefix == "https" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoH server"
@@ -535,7 +535,15 @@ AllowedGoogle:add("client2.google.com")
 AllowedGoogle:add("client3.google.com")
 AllowedGoogle:add("client4.google.com")
 AllowedGoogle:add("client5.google.com")
+AllowedGoogle:add("clients1.google.com")
+AllowedGoogle:add("clients2.google.com")
+AllowedGoogle:add("clients3.google.com")
+AllowedGoogle:add("clients4.google.com")
+AllowedGoogle:add("clients5.google.com")
+AllowedGoogle:add("clients.google.com")
 AllowedGoogle:add("connectivitycheck.gstatic.com")
+AllowedGoogle:add("googleapis.com")
+AllowedGoogle:add("mtalk.google.com")
 --
 EOF
         # Check for allowed external hosts
