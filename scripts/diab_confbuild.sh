@@ -659,10 +659,16 @@ function orderedLeastOutstanding(servers, dq)
                                 if (os.time() >= CheckTime) then
                                         Log("DNS server "..workingname.." marked UP for retest...")
                                         servers[i]:setUp()
+					servers[i].upStatus=true
                                 end
 			end
                 else
                         Log("DNS server "..workingname.." upStatus is FALSE (healthcheck failed).")
+			if (os.time() >= CheckTime) then
+                                Log("DNS server "..workingname.." marked UP for retest...")
+                                servers[i]:setUp()
+                                servers[i].upStatus=true
+                        end
                 end
                 -- Increment counter for next loop
                 i=i+1
