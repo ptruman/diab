@@ -35,5 +35,5 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN mkdir -p /var/log/supervisor && \
         chown root /usr/sbin/diab*.sh && \
         chmod 500 /usr/sbin/*.sh
-CMD ["/usr/bin/supervisord"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 ENTRYPOINT [""]
