@@ -31,6 +31,9 @@ COPY --from=dnsdistbuild /root/go/bin/routedns /usr/local/bin/routedns
 RUN apt-get update && apt-get upgrade && apt-get install -y apt-utils libasan5 liblua5.3-0 libedit2 libsodium23 libfstrm0 libsnmp30 libcdb1 libre2-5 liblmdb0 libh2o-evloop0.13 libprotobuf-dev libubsan1 ca-certificates supervisor
 COPY ./scripts/diab_confbuild.sh /usr/sbin/diab_confbuild.sh
 COPY ./scripts/diab_startup.sh /usr/sbin/diab_startup.sh
-RUN chmod a+rx /usr/sbin/*.sh
-CMD ["/usr/sbin/diab_startup.sh"]
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN mkdir -p /var/log/supervisor && \
+        chown root /usr/sbin/diab*.sh && \
+        chmod 500 /usr/sbin/*.sh
+CMD ["/usr/bin/supervisord"]
 ENTRYPOINT [""]
