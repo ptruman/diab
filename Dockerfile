@@ -33,8 +33,11 @@ COPY --from=dnsdistbuild /root/go/bin/routedns /usr/local/bin/routedns
 RUN apt-get update && apt-get upgrade && apt-get install -y apt-utils liblua5.3-0 libedit2 libsodium23 libfstrm0 libsnmp30 libcdb1 libre2-5 liblmdb0 libh2o-evloop0.13 libprotobuf-dev dnscrypt-proxy ca-certificates 
 COPY ./scripts/diab_confbuild.sh /usr/sbin/diab_confbuild.sh
 COPY ./scripts/diab_startup.sh /usr/sbin/diab_startup.sh
+COPY ./scripts/diab_healthcheck.sh /usr/sbin/diab_healthcheck.sh
 COPY ./scripts/diab_rescue /usr/sbin/diab_rescue
 COPY ./scripts/diab_cli /usr/sbin/diab_cli
-RUN chmod a+rx /usr/sbin/*.sh
+RUN chmod a+rx /usr/sbin/diab*
+HEALTHCHECK  --interval=5m --timeout=3s \
+        CMD /usr/sbin/diab_healthcheck.sh
 CMD ["/usr/sbin/diab_startup.sh"]
 ENTRYPOINT [""]
