@@ -1,7 +1,7 @@
 # Base image (CHANGE TO BUSTER FROM LATEST)
 FROM bitnami/minideb:latest as dnsdistbuild
 # Baseline the image to current standard
-RUN apt update && apt upgrade
+RUN apt update -y && apt upgrade -y
 # Create and switch into base folder
 # RUN mkdir -p /usr/src
 WORKDIR /tmp
