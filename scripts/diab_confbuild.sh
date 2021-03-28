@@ -154,7 +154,7 @@ EOF
 			if [ $IPV6 -eq 1 ]; then
 				echo "webserver(\"::8083/0\")" >> /etc/dnsdist/dnsdist.conf
 			fi
-			echo "setWebserverConfig({password=\"$DIAB_WEB_PASSWORD\", apiKey=\"$DIAB_WEB_APIKEY\", acl=\"$DIAB_TRUSTED_LANS\"})" >> /etc/dnsdist/dnsdist.conf
+			echo "setWebserverConfig({password=\"$DIAB_WEB_PASSWORD\", apiKey=\"$DIAB_WEB_APIKEY\", acl=\"$DIAB_TRUSTED_LANS,127.0.01\"})" >> /etc/dnsdist/dnsdist.conf
                         echo "# DIAB : INFO    : Webserver will also be available on IPV6 port 8083"
                 fi
         fi
