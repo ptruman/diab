@@ -3,10 +3,10 @@
 #
 HealthCheck=0
 if [ -f $DIAB_HEALTHCHECK_SCRIPT ]; then
-        /usr/sbin/diab_health_script.sh
+        /usr/sbin/diab_health_json.sh
         HealthCheck=$?
 else
-        /usr/sbin/diab_health_json.sh
+        /usr/sbin/diab_health_script.sh
         HealthCheck=$?
 fi
 exit $HealthCheck
