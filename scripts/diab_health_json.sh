@@ -7,8 +7,9 @@
 ContainerIP=`hostname -i`
 # Check if DIAB_WEB_APIKEY exists - if not, grab it from /etc/dnsdist/dnsdist.conf
 if [ -f $DIAB_WEB_APIKEY ]; then
-        DIAB_WEB_APIKEY=`cat /etc/dnsdist/dnsdist.conf | grep setWebserverConfig | awk '{print $2}' | sed 's/apiKey=//' | sed 's/\"//g' | sed 's/",//'`
+        DIAB_WEB_APIKEY=`cat /etc/dnsdist/dnsdist.conf | grep setWebserverConfig | awk '{print $2}' | sed 's/apiKey=//' | sed 's/\"//g'`
 fi
+DIAB_WEB_APIKEY=${DIAB_WEB_APIKEY::-1}
 # Request the JSON server status
 APIOutput=`curl -s -H "X-API-Key: $DIAB_WEB_APIKEY" http://$ContainerIP:8083/api/v1/servers/localhost`
 # Count the servers
