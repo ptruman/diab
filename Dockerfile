@@ -34,6 +34,8 @@ RUN apt-get update -y && apt-get upgrade -y && apt-get install -y apt-utils libl
 COPY ./scripts/diab_confbuild.sh /usr/sbin/diab_confbuild.sh
 COPY ./scripts/diab_startup.sh /usr/sbin/diab_startup.sh
 COPY ./scripts/diab_healthcheck.sh /usr/sbin/diab_healthcheck.sh
+COPY ./scripts/diab_health_script.sh /usr/sbin/diab_health_script.sh
+COPY ./scripts/diab_health_json.sh /usr/sbin/diab_health_json.sh
 COPY ./scripts/diab_rescue /usr/sbin/diab_rescue
 COPY ./scripts/diab_cli /usr/sbin/diab_cli
 RUN chmod a+rx /usr/sbin/diab*
