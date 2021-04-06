@@ -6,7 +6,7 @@ RUN apt update -y && apt upgrade -y
 # RUN mkdir -p /usr/src
 WORKDIR /tmp
 # Get wget and bzip2 so we can grab and unzip the 1.5 binary
-RUN apt-get install -y wget bzip2 && wget https://downloads.powerdns.com/releases/dnsdist-1.6.0-alpha2.tar.bz2 && \
+RUN apt-get install -y wget bzip2 && wget https://downloads.powerdns.com/releases/dnsdist-1.6.0-alpha3.tar.bz2 && \
         wget https://golang.org/dl/go1.15.4.linux-amd64.tar.gz && \
         bzip2 -d dnsdist*.bz2 && tar -xvf dnsdist*.tar && rm dnsdist*.tar && \
         gunzip go1.15.4.linux-amd64.tar.gz && tar -xvf go1.15.4.linux-amd64.tar && rm go1.15.4.linux-amd64.tar
@@ -15,7 +15,7 @@ RUN apt-get install -y libboost-dev lua5.3 libedit-dev libsodium-dev ragel libto
 # Build ROUTEDNS (to be used for egress capabilities)
 RUN GO111MODULE=on /tmp/go/bin/go get -v github.com/folbricht/routedns/cmd/routedns && chown -R root:root ./go
 # Build (statically) with DNSCrypt, DoT, DoH support, plus dnstab, protobuf, re2, SNMP and some sanitisation
-WORKDIR /tmp/dnsdist-1.6.0-alpha2
+WORKDIR /tmp/dnsdist-1.6.0-alpha3
 # --enable-asan --enable-lsan --enable-ubsan
 RUN ./configure --enable-dnscrypt --enable-static --enable-dns-over-tls --enable-dns-over-https --enable-dnstap --with-protobuf --with-re2 --with-net-snmp
 # Compile!
