@@ -1,9 +1,10 @@
 #!/bin/bash
 # DIAB Startup Script
+DV=`cat /etc/dnsdist/diab_version.txt`
 echo "#"
-echo "# DIAB : INFO    : Attempting to start diab..."
+echo "# DIAB : INFO    : Attempting to start diab V$DV..."
 # Run the configurator....
-echo "# DIAB : INFO    : Launching diab configurator..."
+echo "# DIAB : INFO    : Launching diab V$DV configurator..."
 # Check for override...
 if [ $DIAB_FORCEREBUILD ]; then
 	if [ $DIAB_FORCEREBUILD -eq 1 ]; then
