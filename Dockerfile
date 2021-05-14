@@ -40,6 +40,7 @@ COPY --from=dnsdistbuild /root/go/bin/routedns /usr/local/bin/routedns
 RUN apt-get update -y && apt-get upgrade -y && apt-get install -y apt-utils liblua5.3-0 libedit2 libsodium23 && \
         libfstrm0 libsnmp30 libcdb1 libre2-5 liblmdb0 libh2o-evloop0.13 libprotobuf-dev dnscrypt-proxy curl jq ca-certificates 
 # Copy in the diab scripts to /usr/sbin
+COPY ./diab_version.txt /etc/dnsdist/diab_version.txt
 COPY ./scripts/diab_confbuild.sh /usr/sbin/diab_confbuild.sh
 COPY ./scripts/diab_startup.sh /usr/sbin/diab_startup.sh
 COPY ./scripts/diab_healthcheck.sh /usr/sbin/diab_healthcheck.sh
