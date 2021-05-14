@@ -1,7 +1,7 @@
 #!/bin/bash
 # DIAB Configuration Build Script
 # Set Version
-DV="2.0"
+DV=`cat /etc/dnsdist/diab_version.txt`
 echo "# DIAB : INFO    : diab V$DV configurator starting..."
 # Check for CLI parameters (override)
 if [ $1 ]; then
