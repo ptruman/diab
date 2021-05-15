@@ -1,20 +1,49 @@
 #!/bin/bash
 # DIAB Configuration Build Script
 # Set Version
-DV="1.8"
+DV=`cat /etc/dnsdist/diab_version.txt`
 echo "# DIAB : INFO    : diab V$DV configurator starting..."
-# Check for existing config file...
-if [ -f "/etc/dnsdist/dnsdist.conf" ]; then
+# Check for CLI parameters (override)
+if [ $1 ]; then
+	if [ $1 == "OVERRIDE" ]; then
+		OVERRIDE=1
+		echo "# DIAB : INFO    : OVERRIDE specified - forcibly recreating configuration..."
+		rm -rf /etc/dnsdist/dnsdist.conf
+	else
+		OVERRIDE=0
+	fi
+else
+	OVERRIDE=0
+fi
+# Check for existing config file or override flag
+if [ -f "/etc/dnsdist/dnsdist.conf" ] && [ $OVERRIDE -eq 0 ]; then
         # Config present - do nothing
         echo "# DIAB : INFO    : Found existing /etc/dnsdist/dnsdist.conf - skipping config build"
         echo "# DIAB : WARNING : If you have changed Docker environment variables, they will not take effect as the existing file will be used."
 else
-        # Check for IPv6 
+        # Check for IPv6
         if [ $DIAB_ENABLE_IPV6 ]; then
                 if [ $DIAB_ENABLE_IPV6 -eq 1 ]; then
                         IPV6=1
-                fi
-        fi
+			DCIPV6=true
+                else
+			IPV6=0
+			DCIPV6=false
+		fi
+        else
+		IPV6=0
+		DCIPV6=false
+	fi
+	# Check for intermediate settings
+	if [ $DIAB_OPEN_INTERMEDIATE ]; then
+		if [ $DIAB_OPEN_INTERMEDIATE -eq 1 ]; then
+			OPENINTERMEDIATE=1
+		else
+			OPENINTERMEDIATE=0
+		fi
+	else
+		OPENINTERMEDIATE=0
+	fi
         # Get container IP
         ContainerIP=`awk 'END{print $1}' /etc/hosts`
         # Test for key variables
@@ -37,7 +66,9 @@ else
         # Create the config folders if not present...
         mkdir -p /etc/dnsdist
         mkdir -p /etc/routedns
-        if [ -f "/etc/routedns/listeners.toml" ]; then
+	mkdir -p /etc/dnscrypt
+	# Check for routedns files and override flag
+        if [ -f "/etc/routedns/listeners.toml" ] && [ $OVERRIDE -eq 0 ]; then
                 echo "# DIAB : INFO    : Found existing /etc/routedns/listeners.toml - skipping blank creation"
                 CreateRouteDNSListeners=0
         else
@@ -45,7 +76,7 @@ else
                 CreateRouteDNSListeners=1
                 echo > /etc/routedns/listeners.toml
         fi
-        if [ -f "/etc/routedns/resolvers.toml" ]; then
+        if [ -f "/etc/routedns/resolvers.toml" ] && [ $OVERRIDE -eq 0 ]; then
                 echo "# DIAB : INFO    : Found existing /etc/routedns/resolvers.toml - skipping blank creation"
                 CreateRouteDNSResolvers=0
         else
@@ -53,7 +84,16 @@ else
                 CreateRouteDNSResolvers=1
                 echo > /etc/routedns/resolvers.toml
         fi
-        # Start building the config file...
+	# Check for DNSCrypt files and override flag
+	if [ -f "/etc/dnscrypt/dnscrypt-proxy.toml" ] && [ $OVERRIDE -eq 0 ]; then
+                echo "# DIAB : INFO    : Found existing /etc/dnscrypt/dnscrypt-proxy.toml - skipping blank creation"
+		CreateDNSCryptListeners=0
+	else
+	echo "# DIAB : INFO    : No existing /etc/dnscrypt/dnscrypt-proxy.toml found - creating shell"
+                CreateDNSCryptListeners=1
+                echo > /etc/dnscrypt/dnscrypt-proxy.toml
+	fi
+        # Start building the dnsdist config file...
         # Check if Logging has been requested
         if [ $DIAB_ENABLE_LOGGING ]; then
                 if [ $DIAB_ENABLE_LOGGING -eq 1 ]; then
@@ -74,6 +114,25 @@ EOF
                 echo "addACL('::/0')" >> /etc/dnsdist/dnsdist.conf
         fi
         echo "--" >> /etc/dnsdist/dnsdist.conf
+	# Check for queue and drop counts
+	if [ -f $DIAB_MAX_DROPS ]; then
+		echo "# DIAB : INFO    : DIAB_MAX_DROPS not set - defaulting to 10"
+		export DIAB_MAX_DROPS=10
+	fi
+        if [ -f $DIAB_MAX_QUEUE ]; then
+                echo "# DIAB : INFO    : DIAB_MAX_QUEUE not set - defaulting to 10"
+                export DIAB_MAX_QUEUE=10
+        fi
+	if [ $DIAB_DNSSEC ]; then
+		if [ $DIAB_DNSSEC -eq 1 ]; then
+			echo " #DIAB : INFO    : DNSSEC requested"
+			$DNSSEC=true
+		else
+			$DNSSEC=false
+		fi
+	else
+		DNSSEC=false
+	fi
         # Check for/enable the webserver
         if [ $DIAB_ENABLE_WEBSERVER ]; then
                 if [ $DIAB_ENABLE_WEBSERVER -eq 1 ]; then
@@ -90,8 +149,13 @@ EOF
                                 echo "# DIAB : INFO    : Generated DIAB_WEB_APIKEY as $DIAB_WEB_APIKEY"
                         fi
                         # Write webserver configuration
-                        echo "webserver(\"0.0.0.0:8083\", \"$DIAB_WEB_PASSWORD\", \"$DIAB_WEB_APIKEY\", {}, \"$DIAB_TRUSTED_LANS\")" >> /etc/dnsdist/dnsdist.conf
-                        echo "# DIAB : INFO    : Webserver will be accessible at http://$ContainerIP:8083"
+                        echo "webserver(\"0.0.0.0:8083\")" >> /etc/dnsdist/dnsdist.conf
+			echo "# DIAB : INFO    : Webserver will be accessible at http://$ContainerIP:8083"
+			if [ $IPV6 -eq 1 ]; then
+				echo "webserver(\"::8083/0\")" >> /etc/dnsdist/dnsdist.conf
+			fi
+			echo "setWebserverConfig({password=\"$DIAB_WEB_PASSWORD\", apiKey=\"$DIAB_WEB_APIKEY\", acl=\"$DIAB_TRUSTED_LANS,127.0.0.1\"})" >> /etc/dnsdist/dnsdist.conf
+                        echo "# DIAB : INFO    : Webserver will also be available on IPV6 port 8083"
                 fi
         fi
         # Check for/enable base DNS...
@@ -201,7 +265,10 @@ EOF
                 else
                         UCSInsertion="useClientSubnet=true"
                 fi
+	else
+		UCSInsertion="useClientSubnet=true"
         fi
+
         # Process and add specified DIAB_UPSTREAM_IP_AND_PORT values
         echo "-- Backend DNS servers" >> /etc/dnsdist/dnsdist.conf
         Working=`echo $DIAB_UPSTREAM_IP_AND_PORT | sed "s/ //g"`
@@ -221,6 +288,118 @@ EOF
                 #echo "Working SuffixA : $WorkingSuffixa"
                 #echo "Working SuffixB : $WorkingSuffixb"
                 #echo "USN = ${UpstreamName[$WorkingCount]}"
+
+                if [ $OPENINTERMEDIATE -eq 1 ]; then
+                        V4INT="0.0.0.0:900"
+			V6TAIL="0"
+                else
+                        V4INT="127.0.0.1:900"
+			V6TAIL="1"
+                fi
+
+		if [ $WorkingPrefix == "sdns:" ]; then
+			echo "# DIAB : INFO    : $i appears to be a DNSCrypt server"
+			if [ $Identified -eq 0 ]; then
+				echo "# DIAB : INFO    : Building DNSCrypt listener config for $i (DNSCrypt)"
+                                DNSCryptListeners="listen_addresses = ['$V4INT$WorkingCount'"
+                                if [ $IPV6 -eq 1 ]; then
+                                        DNSCryptSuffix=", '[::$V6TAIL]:900$WorkingCount]']"
+                                else
+					DNSCryptSuffix="]"
+				fi
+                                DNSCryptListeners=$DNSCryptListeners$DNSCryptSuffix
+				cat << EOF >> /etc/dnscrypt/dnscrypt-proxy.toml
+##############################################
+#                                            #
+#        dnscrypt-proxy configuration        #
+#                                            #
+##############################################
+
+## This is an example configuration file.
+## Online documentation is available here: https://dnscrypt.info/doc
+
+##################################
+#         Global settings        #
+##################################
+
+## List of servers to use
+server_names = ['$USN']
+
+## List of local addresses and ports to listen to. Can be IPv4 and/or IPv6.
+## To only use systemd activation sockets, use an empty set: []
+$DNSCryptListeners
+
+## Maximum number of simultaneous client connections to accept
+max_clients = 250
+
+## Require servers (from static + remote sources) to satisfy specific properties
+# Use servers reachable over IPv4
+ipv4_servers = true
+
+# Use servers reachable over IPv6 -- Do not enable if you don't have IPv6 connectivity
+ipv6_servers = $DCIPV6
+
+# Use servers implementing the DNSCrypt protocol
+dnscrypt_servers = true
+
+# Server must support DNS security extensions (DNSSEC)
+require_dnssec = $DNSSEC
+
+## Always use TCP to connect to upstream servers
+force_tcp = false
+
+## How long a DNS query will wait for a response, in milliseconds
+timeout = 2500
+
+## Delay, in minutes, after which certificates are reloaded
+cert_refresh_delay = 240
+
+## Never try to use the system DNS settings; unconditionally use the
+## fallback resolver.
+ignore_system_dns = false
+
+## Automatic log files rotation
+# Maximum log files size in MB
+log_files_max_size = 10
+
+# How long to keep backup files, in days
+log_files_max_age = 7
+
+# Maximum log files backups to keep
+log_files_max_backups = 1
+
+# Disposition IPV6 queries
+block_ipv6 = $DCIPV6
+
+###########################
+#        DNS cache        #
+###########################
+
+## Enable a DNS cache to reduce latency and outgoing traffic
+cache = true
+
+## Cache size
+cache_size = 256
+
+## Minimum TTL for cached entries
+cache_min_ttl = 600
+
+## Maximum TTL for cached entries
+cache_max_ttl = 86400
+
+## TTL for negatively cached entries
+cache_neg_ttl = 60
+
+[static]
+        [static.'$USN']
+	        stamp = '$i'
+EOF
+                                cat << EOF >> /etc/dnsdist/dnsdist.conf
+newServer({address="127.0.0.1:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
+EOF
+			fi
+			Identified=1
+		fi
                 if [ $WorkingPrefix == "https" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoH server"
                         if [ $Identified -eq 0 ]; then
@@ -231,7 +410,7 @@ EOF
 address = "$i{?dns}"
 protocol = "doh"
 EOF
-                                fi
+				fi
                                 if [ $DIAB_ENABLE_OUTBOUND_PRIVACY ]; then
                                         if [ $DIAB_ENABLE_OUTBOUND_PRIVACY -eq 1 ]; then
                                                 cat << EOF >> /etc/routedns/resolvers.toml
@@ -245,21 +424,31 @@ EOF
                                         echo "# DIAB : INFO    : Building routedns resolver config for $i (DoH)"
                                         cat << EOF >> /etc/routedns/listeners.toml
 [listeners.routedns$WorkingCount-udp]
-address = ":900$WorkingCount"
+address = "$V4INT$WorkingCount"
 protocol = "udp"
 resolver = "routedns$WorkingCount"
 
 [listeners.routedns$WorkingCount-tcp]
-address = ":900$WorkingCount"
+address = "$V4INT$WorkingCount"
 protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
-                                        cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="0.0.0.0:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
+					if [ $IPV6 -eq 1 ]; then
+	                                        cat << EOF >> /etc/routedns/resolvers.toml
+[listeners.routedns$WorkingCount-udp]
+address = "::900$WorkingCount/$V6TAIL"
+protocol = "udp"
+resolver = "routedns$WorkingCount"
+
+[listeners.routedns$WorkingCount-tcp]
+address = "::900$WorkingCount/V6TAIL"
+protocol = "tcp"
+resolver = "routedns$WorkingCount"
 EOF
-                                        if [ $IPV6 -eq 1 ]; then
-                                                echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
-                                        fi
+					fi
+                                        cat << EOF >> /etc/dnsdist/dnsdist.conf
+newServer({address="127.0.0.1:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
+EOF
                                 fi
                                 Identified=1
                         fi
@@ -288,21 +477,36 @@ EOF
                                         echo "# DIAB : INFO    : Building routedns resolver config for $i (DoT)"
                                         cat << EOF >> /etc/routedns/listeners.toml
 [listeners.routedns$WorkingCount-udp]
-address = ":900$WorkingCount"
+address = "$V4INT$WorkingCount"
 protocol = "udp"
 resolver = "routedns$WorkingCount"
 
 [listeners.routedns$WorkingCount-tcp]
-address = ":900$WorkingCount"
+address = "$V4INT$WorkingCount"
 protocol = "tcp"
 resolver = "routedns$WorkingCount"
 EOF
-                                        cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="0.0.0.0:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
-EOF
                                         if [ $IPV6 -eq 1 ]; then
-                                                echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",$UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
-                                        fi
+                                                cat << EOF >> /etc/routedns/resolvers.toml
+[listeners.routedns$WorkingCount-udp]
+address = "::900$WorkingCount/$V6TAIL"
+protocol = "udp"
+resolver = "routedns$WorkingCount"
+
+[listeners.routedns$WorkingCount-tcp]
+address = "::900$WorkingCount/$V6TAIL"
+protocol = "tcp"
+resolver = "routedns$WorkingCount"
+EOF
+					fi
+
+
+                                        cat << EOF >> /etc/dnsdist/dnsdist.conf
+newServer({address="127.0.0.1:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
+EOF
+                                        # if [ $IPV6 -eq 1 ]; then
+                                        #         echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",$UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
+                                        # fi
                                 fi
                                 Identified=1
                         fi
@@ -331,7 +535,15 @@ AllowedGoogle:add("client2.google.com")
 AllowedGoogle:add("client3.google.com")
 AllowedGoogle:add("client4.google.com")
 AllowedGoogle:add("client5.google.com")
+AllowedGoogle:add("clients1.google.com")
+AllowedGoogle:add("clients2.google.com")
+AllowedGoogle:add("clients3.google.com")
+AllowedGoogle:add("clients4.google.com")
+AllowedGoogle:add("clients5.google.com")
+AllowedGoogle:add("clients.google.com")
 AllowedGoogle:add("connectivitycheck.gstatic.com")
+AllowedGoogle:add("googleapis.com")
+AllowedGoogle:add("mtalk.google.com")
 --
 EOF
         # Check for allowed external hosts
@@ -407,29 +619,56 @@ function orderedLeastOutstanding(servers, dq)
         i = 1
         while servers[i] do
                 workingname = servers[i].name
+                -- Check for a counter of known server drops and set it
+                if not (_G[servers[i].name.."LastDropCount"]) then
+                        _G[servers[i].name.."LastDropCount"] = 0
+                end
+                if not (_G[servers[i].name.."LastQueueTime"]) then
+                        _G[servers[i].name.."LastQueueTime"] = os.time()
+                end
                 -- We only care if the server is currently up
                 if (servers[i].upStatus == true) then
                         -- server shows up (via healthcheck) but may not have been marked down...
                         -- test for drop flags and reset if required
                         if (servers[i]:isUp() == true) then
                                 -- server has NOT been marked down....
-                                --
-                                -- test for DROP COUNT here when ready...
-                                -- set drop flags once ready
-                                --
-                                -- Retrieve the order for the server
-                                order = servers[i].order
-                                -- Create table for this order if not existing
-                                if type(serverlist[order]) ~= "table" then
-                                        serverlist[order] = {}
-                                end
-                                -- Insert this server to the ordered table
-                                table.insert(serverlist[order], servers[i])
+                                -- check if server drop or queue count has increased?
+                                QueueCount=servers[i]:getOutstanding()
+                                DropCount=servers[i]:getDrops()
+                                CheckCount=_G[servers[i].name.."LastDropCount"] + $DIAB_MAX_DROPS
+				if (QueueCount > $DIAB_MAX_QUEUE) or (DropCount > CheckCount) then
+                                        -- Mark the server down and update last Queue count
+                                        Log("DNS server "..workingname.." has an increased drop count/queue - marking down")
+                                        servers[i]:setDown()
+                                        _G[servers[i].name.."LastQueueTime"] = os.time()
+                                        _G[servers[i].name.."LastDropCount"] = DropCount
+                                else
+                                        -- Keep the server in a pool
+                                        -- Retrieve the order for the server
+                                        order = servers[i].order
+                                        -- Create table for this order if not existing
+                                        if type(serverlist[order]) ~= "table" then
+                                                serverlist[order] = {}
+                                        end
+                                        -- Insert this server to the ordered table
+                                        table.insert(serverlist[order], servers[i])
+				end
                         else
-                                Log("DNS server "..workingname.." isUp is FALSE (marked DOWN).")
-                        end
+                                Log("DNS server "..workingname.." isUp is FALSE (forcibly marked DOWN).")
+                                CheckTime=_G[servers[i].name.."LastQueueTime"] + $DIAB_CHECKINTERVAL
+                                if (os.time() >= CheckTime) then
+                                        Log("DNS server "..workingname.." marked UP for retest...")
+                                        servers[i]:setUp()
+					servers[i].upStatus=true
+                                end
+			end
                 else
                         Log("DNS server "..workingname.." upStatus is FALSE (healthcheck failed).")
+			if (os.time() >= CheckTime) then
+                                Log("DNS server "..workingname.." marked UP for retest...")
+                                servers[i]:setUp()
+                                servers[i].upStatus=true
+                        end
                 end
                 -- Increment counter for next loop
                 i=i+1
@@ -453,8 +692,14 @@ function orderedLeastOutstanding(servers, dq)
         -- Return the lowest ordered server list to the leastOutstanding function
         return leastOutstanding.policy(serverlist[lowest], dq)
 end
+EOF
+	if [ $DIAB_ENABLE_STRICT_ORDER ]; then
+		if [ $DIAB_ENABLE_STRICT_ORDER -eq 1 ]; then
+			cat << EOF >> /etc/dnsdist/dnsdist.conf
 setServerPolicyLua("orderedLeastOutstanding", orderedLeastOutstanding)
 EOF
+		fi
+	fi
         if [ $DIAB_ENABLE_CLI ]; then
                 if [ $DIAB_ENABLE_CLI -eq 1 ]; then
                         echo "# DIAB : INFO    : Enabling CLI access on port 5199..."

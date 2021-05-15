@@ -1,0 +1,3 @@
+#!/bin/bash
+echo "# DIAB : INFO    : Starting dnsdist CLI"
+dnsdist -C /etc/dnsdist/dnsdist.conf -c
