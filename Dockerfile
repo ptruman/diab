@@ -13,9 +13,7 @@ RUN apt-get install -y wget bzip2 && wget https://downloads.powerdns.com/release
         bzip2 -d dnsdist*.bz2 && tar -xvf dnsdist*.tar && rm dnsdist*.tar && \
         gunzip go1.15.4.linux-amd64.tar.gz && tar -xvf go1.15.4.linux-amd64.tar && rm go1.15.4.linux-amd64.tar
 # Install all required libraries/packages to support the build (quite a few!)
-RUN apt-get install -y libboost-dev lua5.3 libedit-dev libsodium-dev ragel libtool gcc g++ make libprotobuf-dev && \
-        libre2-dev pkg-config liblua5.3-dev libssl-dev libh2o-dev libh2o-evloop-dev libfstrm-dev libsnmp-dev && \
-        liblmdb++-dev libprotobuf-c-dev protobuf-compiler libsnmp-dev libcdb-dev golang 
+RUN apt-get install -y libboost-dev lua5.3 libedit-dev libsodium-dev ragel libtool gcc g++ make libprotobuf-dev libre2-dev pkg-config liblua5.3-dev libssl-dev libh2o-dev libh2o-evloop-dev libfstrm-dev libsnmp-dev liblmdb++-dev libprotobuf-c-dev protobuf-compiler libsnmp-dev libcdb-dev golang 
 # Build routedns (to be used for egress capabilities)
 RUN GO111MODULE=on /tmp/go/bin/go get -v github.com/folbricht/routedns/cmd/routedns && chown -R root:root ./go
 # Switch into dnsdist src folder
@@ -37,8 +35,7 @@ COPY --from=dnsdistbuild /root/go/bin/routedns /usr/local/bin/routedns
 # Install all required libraries/packages to support the build (quite a few!)
 # NB : The following packages were previously required, but are now disabled : libasan5 libubsan1 / liblsan0
 # NB : Enabling the asan/lsan/ubsan packages in dnsdistbuild WILL require these back in.
-RUN apt-get update -y && apt-get upgrade -y && apt-get install -y apt-utils liblua5.3-0 libedit2 libsodium23 && \
-        libfstrm0 libsnmp30 libcdb1 libre2-5 liblmdb0 libh2o-evloop0.13 libprotobuf-dev dnscrypt-proxy curl jq ca-certificates 
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y apt-utils liblua5.3-0 libedit2 libsodium23 libfstrm0 libsnmp30 libcdb1 libre2-5 liblmdb0 libh2o-evloop0.13 libprotobuf-dev dnscrypt-proxy curl jq ca-certificates 
 # Copy in the diab scripts to /usr/sbin
 COPY ./diab_version.txt /etc/dnsdist/diab_version.txt
 COPY ./scripts/diab_confbuild.sh /usr/sbin/diab_confbuild.sh
