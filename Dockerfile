@@ -43,6 +43,7 @@ COPY ./scripts/diab_startup.sh /usr/sbin/diab_startup.sh
 COPY ./scripts/diab_healthcheck.sh /usr/sbin/diab_healthcheck.sh
 COPY ./scripts/diab_health_script.sh /usr/sbin/diab_health_script.sh
 COPY ./scripts/diab_health_json.sh /usr/sbin/diab_health_json.sh
+COPY ./scripts/diab_forceup.sh /usr/sbin/diab_forceup.sh
 COPY ./scripts/diab_rescue /usr/sbin/diab_rescue
 COPY ./scripts/diab_cli /usr/sbin/diab_cli
 # Set all scripts executable
