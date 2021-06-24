@@ -155,7 +155,8 @@ So - let's run the above example through:
 * **DIAB_ENABLE_STRICT_ORDER** - Set this to 1 if you want *diab* to **only** use upstream servers in the order specified (default is **0**)
 * **DIAB_OPEN_INTERMEDIATE** - Set this to 1 if you want *diab* to make it's internal ports open to everyone internally (default is **0**)
   * NB : You will need this if you want to point diab -> piHole -> diab DNSCrypt etc.
-* **DIAB_WEB_PASSWORD** - Set to whatever you want your webserver password to be.  The username can be anything.
+* **DIAB_WEB_PASSWORD** - Set to whatever you want your webserver password to be.  The username can be anything.  Overridden if you use DIAB_WEB_PASSWORD_FILE.
+* **DIAB_WEB_PASSWORD_FILE** - Set this to /var/run/secrets/DIAB_WEB_PASSWORD_FILE if you want to map a Docker secrets file for the web password.
 * **DIAB_WEB_APIKEY** - Set to whatever you want to use as your dnsdist web API key.  *diab* will generate one for you if not supplied (the reverse of DIAB_WEB_PASSWORD)
 * **DIAB_FORCEREBUILD** - Set this to 1 if you want *diab* to rebuild configuration on every startup
 * **DIAB_MAX_QUEUE** - Set this to the number of queued queries you want to allow before *diab* fails to the next server (default is **10**) 
@@ -321,4 +322,12 @@ If a remote DoH or DoT server was specified, routedns is used to create an inter
 If needs be, the dnsdist CLI can be accessed from the Docker Shell, by running *diab_cli*
 Typing *?* will show all commands available.
 
+# Known Issues
 
+diab will sometimes start and mark all configured resolvers as down.  This is obviously a problem.
+You can either:
+
+* Access the container CLI and run **diab_forceup.sh** - which will forcibly mark the servers as up.  This may resolve the issue.
+* If the above does not work, delete any mounted dnsdist.conf OR access the container CLI and run **diab_confbuild.sh OVERRIDE** - then restart the container.
+
+For some reason, rebuilding the configuration file (even if nothing has changed) seems to coax dnsdist to start correctly.
