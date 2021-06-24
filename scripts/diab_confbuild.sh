@@ -135,28 +135,41 @@ EOF
 	fi
         # Check for/enable the webserver
         if [ $DIAB_ENABLE_WEBSERVER ]; then
-                if [ $DIAB_ENABLE_WEBSERVER -eq 1 ]; then
+		if [ $DIAB_ENABLE_WEBSERVER -eq 1 ]; then
+                        DIAB_WEB_GENERATED=0
                         # Check we have a password specified - generate one if not
-                        if [ -f $DIAB_WEB_PASSWORD ]; then
-                                export DIAB_WEB_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-                                echo "# DIAB : INFO    : DIAB_ENABLED_WEBSERVER is set, but DIAB_WEB_PASSWORD is not."
-                                echo "# DIAB : INFO    : Generated DIAB_WEB_PASSWORD as $DIAB_WEB_PASSWORD"
+                        if [ -f /var/run/secrets/DIAB_WEB_PASSWORD_FILE ]; then
+                                export DIAB_WEB_PASSWORD=`cat /var/run/secrets/DIAB_WEB_PASSWORD_FILE`
+                        else
+                                if [ -f $DIAB_WEB_PASSWORD ]; then
+                                        export DIAB_WEB_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+                                        DIAB_WEB_GENERATED=1
+                                        echo "# DIAB : INFO    : DIAB_ENABLED_WEBSERVER is set, but DIAB_WEB_PASSWORD is not."
+                                        echo "# DIAB : INFO    : Generated DIAB_WEB_PASSWORD as $DIAB_WEB_PASSWORD"
+
+                                fi
                         fi
                         # Check ew have an APIKEY specified - generate one if not
                         if [ -f $DIAB_WEB_APIKEY ]; then
                                 export DIAB_WEB_APIKEY=`echo $DIAB_WEB_PASSWORD | rev`
                                 echo "# DIAB : INFO    : DIAB_ENABLED_WEBSERVER is set, but DIAB_WEB_APIKEY is not."
-                                echo "# DIAB : INFO    : Generated DIAB_WEB_APIKEY as $DIAB_WEB_APIKEY"
+                                if [ $DIAB_WEB_GENERATED -eq 1 ]; then
+                                        echo "# DIAB : INFO    : Generated DIAB_WEB_APIKEY as $DIAB_WEB_APIKEY"
+                                else
+                                        echo "# DIAB : INFO    : Generated DIAB_WEB_APIKEY as the reverse of specified DIAB_WEB_PASSWORD"
+                                fi
                         fi
                         # Write webserver configuration
                         echo "webserver(\"0.0.0.0:8083\")" >> /etc/dnsdist/dnsdist.conf
-			echo "# DIAB : INFO    : Webserver will be accessible at http://$ContainerIP:8083"
-			if [ $IPV6 -eq 1 ]; then
-				echo "webserver(\"::8083/0\")" >> /etc/dnsdist/dnsdist.conf
-			fi
-			echo "setWebserverConfig({password=\"$DIAB_WEB_PASSWORD\", apiKey=\"$DIAB_WEB_APIKEY\", acl=\"$DIAB_TRUSTED_LANS,127.0.0.1\"})" >> /etc/dnsdist/dnsdist.conf
+                        echo "# DIAB : INFO    : Webserver will be accessible at http://$ContainerIP:8083"
+                        if [ $IPV6 -eq 1 ]; then
+                                echo "webserver(\"::8083/0\")" >> /etc/dnsdist/dnsdist.conf
+                        fi
+                        echo "setWebserverConfig({password=\"$DIAB_WEB_PASSWORD\", apiKey=\"$DIAB_WEB_APIKEY\", acl=\"$DIAB_TRUSTED_LANS,127.0.0.1\"})" >> /etc/dnsdist/dnsdist.conf
                         echo "# DIAB : INFO    : Webserver will also be available on IPV6 port 8083"
                 fi
+                # Remove DIAB_WEB_PASSWORD from ENV
+                unset DIAB_WEB_PASSWORD
         fi
         # Check for/enable base DNS...
         if [ $DIAB_ENABLE_DNS ]; then
