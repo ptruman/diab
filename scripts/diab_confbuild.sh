@@ -134,22 +134,30 @@ EOF
 		DNSSEC=false
 	fi
         # Check for/enable the webserver
+        NOPASS=0
         if [ $DIAB_ENABLE_WEBSERVER ]; then
-		if [ $DIAB_ENABLE_WEBSERVER -eq 1 ]; then
+                if [ $DIAB_ENABLE_WEBSERVER -eq 1 ]; then
                         DIAB_WEB_GENERATED=0
                         # Check we have a password specified - generate one if not
-                        if [ -f /var/run/secrets/DIAB_WEB_PASSWORD_FILE ]; then
-                                export DIAB_WEB_PASSWORD=`cat /var/run/secrets/DIAB_WEB_PASSWORD_FILE`
+                        if [ $DIAB_WEB_PASSWORD_FILE ]; then
+                                if [ -f $DIAB_WEB_PASSWORD_FILE ]; then
+                                        export DIAB_WEB_PASSWORD=`cat $DIAB_WEB_PASSWORD_FILE`
+                                else
+                                        echo "# DIAB : INFO    : DIAB_WEB_PASSWORD_FILE is set, but not found. Generating automatically."
+                                        NOPASS=1
+                                fi
                         else
                                 if [ -f $DIAB_WEB_PASSWORD ]; then
-                                        export DIAB_WEB_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-                                        DIAB_WEB_GENERATED=1
                                         echo "# DIAB : INFO    : DIAB_ENABLED_WEBSERVER is set, but DIAB_WEB_PASSWORD is not."
-                                        echo "# DIAB : INFO    : Generated DIAB_WEB_PASSWORD as $DIAB_WEB_PASSWORD"
-
+                                        NOPASS=1
                                 fi
                         fi
-                        # Check ew have an APIKEY specified - generate one if not
+                        if [ $NOPASS -eq 1 ]; then
+                                export DIAB_WEB_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+                                DIAB_WEB_GENERATED=1
+                                echo "# DIAB : INFO    : Generated DIAB_WEB_PASSWORD as $DIAB_WEB_PASSWORD"
+                        fi
+			# Check we have an APIKEY specified - generate one if not
                         if [ -f $DIAB_WEB_APIKEY ]; then
                                 export DIAB_WEB_APIKEY=`echo $DIAB_WEB_PASSWORD | rev`
                                 echo "# DIAB : INFO    : DIAB_ENABLED_WEBSERVER is set, but DIAB_WEB_APIKEY is not."
