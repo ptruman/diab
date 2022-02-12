@@ -8,8 +8,10 @@ The initial use-case is outlined below and may be surprisingly useful for many. 
 This container makes use of:
  - the [bitnami/minideb](https://hub.docker.com/r/bitnami/minideb/) image
  - the totally wonderful [dnsdist](https://dnsdist.org) - which provides the DoH, DoT and DNS front end functionality
- - routedns (https://github.com/folbricht/routedns) for DoT and DoH backend support
+ - routedns (https://github.com/folbricht/routedns) for DoT and DoH backend support (will be removed in 3.0, as dnsdist 1.7 supports natively)
+ - dnscrypt-proxy to enable use of remote DNSCrypt servers (such as OpenDNS)
  - a modified version of orderedLeastOutstanding (https://github.com/sysadminblog/dnsdist-configs/blob/master/orderedLeastOutstanding.lua)
+ - dnstap for DNS logging and debugging (https://github.com/dnstap/golang-dnstap)
  - Some of the authors own scripting ([bash](https://www.gnu.org/software/bash/) and [lua](http://www.lua.org/))
  
 ## Why encrypt DNS?
@@ -30,7 +32,7 @@ The assumption is that you already do (or want to do) the following:
 - Run Docker on said server
 - Have an internet connection with a unique (static or dynamic) external IP address
 - Have a router with port forwarding capabilities
-- Run your own DNS service/filtering (i.e. piHole) - this is not essential however
+- Run your own DNS service/filtering (i.e. piHole) - _this is not essential however_
 -- If you run your own DNS, you likely don't want devices/browsers on your network going to "other" DNS providers
 -- You may *already* have piHole (or other DNS tool) configured to securely talk to another DNS service, i.e. OpenDNS via DNSCrypt
 - Run your own VPN (i.e. WireGuard) to secure your mobile device traffic (which means access to your piHole server when roaming!)
@@ -52,7 +54,7 @@ Finally, piHole currently only offers plain old DNS...
 
 ### Making sense?
 
-The author had all of the use case requirements described above - a Linux box with OpenMediaVault, Docker with piHole, Traefik and WireGuard - along with a desire to use Android's "Always-On" and "Block connections without VPN" settings - ***but*** ensuring that the "Private DNS" could be used, but using the author's own server.
+The author had all of the use case requirements described above - a Linux box with OpenMediaVault, Docker with piHole, Traefik and WireGuard - along with a desire to use Android's "Always-On" and "Block connections without VPN" settings - ***but*** ensuring that the "Private DNS" function could be used, but using the author's own server.
 
 You might at this point think "*Hang on, won't WireGuard be encrypting the DNS traffic to piHole, and DNScrypt encrypting all the outgoing queries?*" - and you'd partially be right...*however*:
 
@@ -67,7 +69,7 @@ You might at this point think "*Hang on, won't WireGuard be encrypting the DNS t
   - If you force a user provided hostname, Android can ONLY use secure DNS to lookup WireGuard
 
 Therefore for full control, you need need to :
-- provide an "insecure" (unencrypted) DNS server for Android's initial connection
+- provide an "insecure" (unencrypted) DNS server for Android's _initial_ connection
 - ensure the same DNS server can also speak DoT
 - You could opt to use a provided services to do this, *however*:
   - it wouldn't be *yours*
@@ -91,7 +93,7 @@ Running as a Docker container on a macvlan interface (i.e. with it's own LAN IP)
    - It can (and should) be configured to answer specific external queries, just to get your WireGuard/VPN connected
 3. DoH - internally *and* externally - forwarded to a DNS service of your choice
 4. DoT - internally *and* externally - forwarded to a DNS service of your choice (enabling "Private DNS" on Android)
-5. DNSCrypt outbound support
+5. DNSCrypt outbound support - enabling a service of your choice (such as OpenDNS)
 6. EDNS manipulation (passthrough to an upstream server, or not...)
 
 Not only that, but *diab* can be "looped" - so for example, the author:
@@ -99,7 +101,7 @@ Not only that, but *diab* can be "looped" - so for example, the author:
 - *diab* is configured to speak to piHole **and** OpenDNS, via DNSCrypt (in failover)
 - piHole is configured to use the *diab* OpenDNS connection
 
-Thus, the author gets encrypted connections, piHole filtering, and encrypted internet lookups.  If piHole fails, *diab* simply failsover and continues using OpenDNS securely.
+Thus, the author gets encrypted connections, piHole filtering, and encrypted internet lookups.  If piHole fails, *diab* simply fails over and continues using OpenDNS securely.
 
 The assumption here is that you are already using your "DNS service of choice" (i.e. piHole, or another DoT/DoH/DNSCrypt proxy to an external DNS). *diab* can just continue plugging into that - providing you a secure front end - so all you need to do is tell *diab* where your existing DNS setup is and change your network DNS to the new *diab* IP.  
 
@@ -319,8 +321,14 @@ If a remote DoH or DoT server was specified, routedns is used to create an inter
 
 ## Command Line Interface
 
-If needs be, the dnsdist CLI can be accessed from the Docker Shell, by running *diab_cli*
+If needs be, the native dnsdist CLI can be accessed from the Docker Shell, by running *diab_cli*
 Typing *?* will show all commands available.
+
+The following additional commands are available within the diab host shell:
+* _diab_rescue_ : Downloads nano & ps utilities if you want to edit things "on the fly" in the image
+* _diab_forceup.sh_ : Forces all resolvers "up" 
+* _diab_enable_dnstap_ : Enables DNSTAP logging
+* _diab_disable_dnstap_ : Disables DNSTAP logging
 
 # Known Issues
 
