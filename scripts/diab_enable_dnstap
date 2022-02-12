@@ -6,3 +6,4 @@ dnstap -u /var/run/dnstap.sock -w /tmp/dnstap.out > /dev/null &
 echo "dnstap=newFrameStreamUnixLogger(\"/var/run/dnstap.sock\")" | diab_cli SILENT
 echo "addResponseAction(AllRule(),DnstapLogResponseAction(\"diab\",dnstap))" | diab_cli SILENT
 echo "# DIAB : INFO    : dnstap is now logging to /tmp/dnstap.out"
+echo "# DIAB : INFO    : Use \"dnstap -y -r /tmp/dnstap.out\" to view output (can be redirected to a file)"
