@@ -1,0 +1,13 @@
+#!/bin/bash
+echo "# DIAB : INFO    : Stopping dnstap"
+# Locate the relevant response rule (typically 0 but may not be)
+DIABTAPRA=`echo "showResponseRules()" | diab_cli | grep "log response as dnstap" | awk '{print $1}'`
+# Remove the response rule
+echo "rmResponseRule(0)" | diab_cli SILENT
+# Kill the DNSTAP object
+echo "dnstap=nil" | diab_cli SILENT
+# Kill the socket listener
+killall dnstap
+echo "# DIAB : INFO    : dnstap stopped.  Log info stored in /tmp/dnstap.out" 
+# Offer user option to remove the file
+rm -i /tmp/dnstap.out
