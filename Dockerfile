@@ -49,8 +49,10 @@ COPY ./scripts/diab_health_json.sh /usr/sbin/diab_health_json.sh
 COPY ./scripts/diab_forceup.sh /usr/sbin/diab_forceup.sh
 COPY ./scripts/diab_rescue /usr/sbin/diab_rescue
 COPY ./scripts/diab_cli /usr/sbin/diab_cli
+COPY ./scripts/diab_enable_dnstap /usr/sbin/diab_cli
+COPY ./scripts/diab_disable_dnstap /usr/sbin/diab_cli
 # Set all scripts executable
-RUN chmod a+rx /usr/sbin/diab*
+RUN chmod u+rx /usr/sbin/diab*
 # Create the docker healthcheck call to the healthcheck script
 HEALTHCHECK  --interval=5m --timeout=3s \
         CMD /usr/sbin/diab_healthcheck.sh
