@@ -1,0 +1,8 @@
+#!/bin/bash
+echo "# DIAB : INFO    : Starting dnstap"
+# Run DNSTAP as silently as possible
+dnstap -u /var/run/dnstap.sock -w /tmp/dnstap.out > /dev/null &
+# Setup DNSTAP in running dnsdist
+echo "dnstap=newFrameStreamUnixLogger(\"/var/run/dnstap.sock\")" | diab_cli SILENT
+echo "addResponseAction(AllRule(),DnstapLogResponseAction(\"diab\",dnstap))" | diab_cli SILENT
+echo "# DIAB : INFO    : dnstap is now logging to /tmp/dnstap.out"
