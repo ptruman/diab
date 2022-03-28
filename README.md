@@ -336,3 +336,8 @@ You can either:
 * If the above does not work, delete any mounted dnsdist.conf OR access the container CLI and run **diab_confbuild.sh OVERRIDE** - then restart the container.
 
 For some reason, rebuilding the configuration file (even if nothing has changed) seems to coax dnsdist to start correctly.
+
+# Disclaimer
+
+The author is a 'single contributor' and testing is limited to one or two specific use cases.
+Your mileage may vary.  EDNS/privacy behaving (or not) is not a guarantee and you are advised to sniff your own traffic to satisfy if things are working as you intend!
