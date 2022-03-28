@@ -259,12 +259,12 @@ EOF
 setECSSourcePrefixV4(32)
 setECSSourcePrefixV6(128)
 EOF
+		fi
 	else
 		cat << EOF >> /etc/dnsdist/dnsdist.conf
 setECSSourcePrefixV4(32)
 setECSSourcePrefixV6(128)
 EOF	
-		fi
 	fi
 	cat << EOF >> /etc/dnsdist/dnsdist.conf
 setMaxTCPConnectionsPerClient(1000)   -- set X(int) for number of tcp connections from a single client. Useful for rate limiting the concurrent connections.
