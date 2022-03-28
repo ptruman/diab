@@ -1,4 +1,4 @@
-# diab V2.0 Dockerfile
+# diab V3.0 Dockerfile
 # 
 # Create the temporary "dnsdistbuild" image to generate required binaries
 # Set base image (NB: There may be potential switch to "buster" from "latest" - TBC)
@@ -7,7 +7,7 @@ FROM bitnami/minideb:latest as dnsdistbuild
 RUN apt update -y && apt upgrade -y
 # Switch into /tmp
 WORKDIR /tmp
-# Get wget, bzip2, dnsdist-1.6 src & golang - then unzip & untar everything...
+# Get wget, bzip2, dnsdist-1.7 src & golang - then unzip & untar everything...
 RUN apt-get install -y wget bzip2 && wget https://downloads.powerdns.com/releases/dnsdist-1.7.0.tar.bz2 && \
         wget https://golang.org/dl/go1.15.4.linux-amd64.tar.gz && \
         bzip2 -d dnsdist*.bz2 && tar -xvf dnsdist*.tar && rm dnsdist*.tar && \
@@ -38,12 +38,12 @@ COPY --from=dnsdistbuild /root/go/bin/dnstap /usr/local/bin/dnstap
 RUN apt-get update -y && apt-get upgrade -y && apt-get install -y apt-utils liblua5.3-0 libedit2 libsodium23 libfstrm0 libsnmp30 libcdb1 libre2-5 liblmdb0 libh2o-evloop0.13 libprotobuf-dev dnscrypt-proxy curl jq ca-certificates 
 # Copy in the diab scripts to /usr/sbin
 COPY ./diab_version.txt /etc/dnsdist/diab_version.txt
-COPY ./scripts/diab_confbuild.sh /usr/sbin/diab_confbuild.sh
-COPY ./scripts/diab_startup.sh /usr/sbin/diab_startup.sh
-COPY ./scripts/diab_healthcheck.sh /usr/sbin/diab_healthcheck.sh
-COPY ./scripts/diab_health_script.sh /usr/sbin/diab_health_script.sh
-COPY ./scripts/diab_health_json.sh /usr/sbin/diab_health_json.sh
-COPY ./scripts/diab_forceup.sh /usr/sbin/diab_forceup.sh
+COPY ./scripts/diab_confbuild /usr/sbin/diab_confbuild
+COPY ./scripts/diab_startup /usr/sbin/diab_startup
+COPY ./scripts/diab_healthcheck /usr/sbin/diab_healthcheck
+COPY ./scripts/diab_health_script /usr/sbin/diab_health_script
+COPY ./scripts/diab_health_json /usr/sbin/diab_health_json
+COPY ./scripts/diab_forceup /usr/sbin/diab_forceup
 COPY ./scripts/diab_rescue /usr/sbin/diab_rescue
 COPY ./scripts/diab_cli /usr/sbin/diab_cli
 COPY ./scripts/diab_enable_dnstap /usr/sbin/diab_cli
@@ -52,7 +52,7 @@ COPY ./scripts/diab_disable_dnstap /usr/sbin/diab_cli
 RUN chmod u+rx /usr/sbin/diab*
 # Create the docker healthcheck call to the healthcheck script
 HEALTHCHECK  --interval=5m --timeout=3s \
-        CMD /usr/sbin/diab_healthcheck.sh
+        CMD /usr/sbin/diab_healthcheck
 # Setup the default command (entrypoint is blank)
-CMD ["/usr/sbin/diab_startup.sh"]
+CMD ["/usr/sbin/diab_startup"]
 ENTRYPOINT [""]
