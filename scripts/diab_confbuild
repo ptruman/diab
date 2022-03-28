@@ -246,8 +246,27 @@ getPool(""):setCache(pc)
 setServerPolicy(leastOutstanding)
 -- define ECS
 setECSOverride(true)
+EOF
+	# Check the outbound privacy settings
+	if [ $DIAB_ENABLE_OUTBOUND_PRIVACY ]; then
+		if [ $DIAB_ENABLE_OUTBOUND_PRIVACY -eq 1 ]
+			cat << EOF >> /etc/dnsdist/dnsdist.conf
+setECSSourcePrefixV4(16)
+setECSSourcePrefixV6(64)
+EOF			
+		else
+			cat << EOF >> /etc/dnsdist/dnsdist.conf
 setECSSourcePrefixV4(32)
 setECSSourcePrefixV6(128)
+EOF
+	else
+		cat << EOF >> /etc/dnsdist/dnsdist.conf
+setECSSourcePrefixV4(32)
+setECSSourcePrefixV6(128)
+EOF	
+		fi
+	fi
+	cat << EOF >> /etc/dnsdist/dnsdist.conf
 setMaxTCPConnectionsPerClient(1000)   -- set X(int) for number of tcp connections from a single client. Useful for rate limiting the concurrent connections.
 setMaxTCPQueriesPerConnection(100)    -- set X(int) , similiar to addAction(MaxQPSIPRule(X), DropAction())
 --
