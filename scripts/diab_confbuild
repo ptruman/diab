@@ -425,18 +425,21 @@ EOF
                 if [ $WorkingPrefix == "https" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoH server"
                         if [ $Identified -eq 0 ]; then
-			
-#				>>>> ADD DOH HERE
-
+				DoHHost=`echo $i | sed 's/https\:\/\///' | awk -F \/ '{print $1}'`
+				DoHSuffix=`echo $i | sed 's/https\:\/\///' | awk -F \/ '{print $2}'`
+                                cat << EOF >> /etc/dnsdist/dnsdist.conf
+newServer({address=”$DoHHost:443”, tls=”openssl”, subjectName=”$DoHHost”, dohPath=”/$DoHSuffix”, validateCertificates=true})
+EOF
                                 Identified=1
                         fi
                 fi
                 if [ $WorkingSuffixa == "853" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoT server"
                         if [ $Identified -eq 0 ]; then
-
-#				>>> ADD DOT HERE
-
+				DoTHost=`echo $i | awk -F \: '{print $1}'`
+                                cat << EOF >> /etc/dnsdist/dnsdist.conf
+newServer({address=”$i”, tls=”openssl”, subjectName=”$DotHost”, validateCertificates=true})
+EOF
 				Identified=1
                         fi
                 fi
