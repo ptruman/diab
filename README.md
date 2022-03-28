@@ -153,8 +153,8 @@ So - let's run the above example through:
 * **DIAB_UPSTREAM_IP_AND_PORT** - Set this to a comma separated list of IPs and ports of your chosen DNS server (i.e. *1.2.3.4:53,2.3.4.5:53*)
 * **DIAB_UPSTREAM_NAME** - Set this to a comma spearated list of friendly names for your chosen DNS servers (i.e. *piHole*) - they will show in the web interface and logs
 * **DIAB_ENABLE_STRICT_ORDER** - Set this to 1 if you want *diab* to **only** use upstream servers in the order specified (default is **0**)
-* **DIAB_OPEN_INTERMEDIATE** - Set this to 1 if you want *diab* to make it's internal ports open to everyone internally (default is **0**)
-  * NB : You will need this if you want to point diab -> piHole -> diab DNSCrypt etc.
+* **DIAB_OPEN_INTERMEDIATE** - Set this to 1 if you want *diab* to make any DNSCrypt forwarders open to everyone internally (default is **0**)
+  * NB : You will need this if you want to point diab -> piHole -> diab DNSCrypt etc.  DIAB listeners are always open to 0.0.0.0 - restrict access via DIAB_TRUSTED_LANS
 * **DIAB_WEB_PASSWORD** - Set to whatever you want your webserver password to be.  The username can be anything.  Overridden if you use DIAB_WEB_PASSWORD_FILE.
 * **DIAB_WEB_PASSWORD_FILE** - Set this to /var/run/secrets/DIAB_WEB_PASSWORD_FILE if you want to map a Docker secrets file for the web password.
 * **DIAB_WEB_APIKEY** - Set to whatever you want to use as your dnsdist web API key.  *diab* will generate one for you if not supplied (the reverse of DIAB_WEB_PASSWORD)
