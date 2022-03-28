@@ -8,7 +8,6 @@ The initial use-case is outlined below and may be surprisingly useful for many. 
 This container makes use of:
  - the [bitnami/minideb](https://hub.docker.com/r/bitnami/minideb/) image
  - the totally wonderful [dnsdist](https://dnsdist.org) - which provides the DoH, DoT and DNS front end functionality
- - routedns (https://github.com/folbricht/routedns) for DoT and DoH backend support (will be removed in 3.0, as dnsdist 1.7 supports natively)
  - dnscrypt-proxy to enable use of remote DNSCrypt servers (such as OpenDNS)
  - a modified version of orderedLeastOutstanding (https://github.com/sysadminblog/dnsdist-configs/blob/master/orderedLeastOutstanding.lua)
  - dnstap for DNS logging and debugging (https://github.com/dnstap/golang-dnstap)
@@ -131,11 +130,10 @@ So - let's run the above example through:
 
 * `/your/ssl/folder:/ssl:ro` (**needed** for DoH and/or DoT - if enabled, it **must** contain *cert.pem* and *key.pem*)
 * `/your/dnsdist/config/folder:/etc/dnsdist` (optional - see below)
-* `/your/routedns/config/folder:/etc/routedns` (optional - see below)
 * `/etc/localtime:/etc/localtime:ro` (optional *but* ensures correct timestamps)
 * `/etc/timezone:/etc/timezone:ro` (optional *but* ensures correct timestamps)
 
-**Note** : If you don't create bind mounts for /etc/dnsdist and /etc/routedns, your configuration will not persist container recreation.  If *diab* doesn't find existing configuration files on startup, it will (re)create the necessary ones.  If you want to 'tweak' your setup once *diab* has got you going, mounted configs are the way to go.
+**Note** : If you don't create a bind mount for /etc/dnsdist, your configuration will not persist container recreation.  If *diab* doesn't find existing configuration files on startup, it will (re)create the necessary ones.  If you want to 'tweak' your setup once *diab* has got you going, mounted configs are the way to go.
 
 ## Environment
 
@@ -146,7 +144,7 @@ So - let's run the above example through:
 * **DIAB_ENABLE_DOH** - Set this to **1** to enable DoT. It will run on 0.0.0.0:443 - and **requires** /ssl/cert.pem and /ssl/key.pem to be available via the /ssl bind mount volume above.
 ** It will *also* enable an "insecure" DOH server on 0.0.0.0:8053 - which you can use with Traefik, nginx or HAproxy (see below)
 * **DIAB_ENABLE_INBOUND_PRIVACY** - Set this to **1** to prevent *diab* passing EDNS info to your UPSTREAM servers (i.e. piHole).  If you are using piHole and want client identification to work, you need to set this to 0, or just not set it (default is **0**)
-* **DIAB_ENABLE_OUTBOUND_PRIVACY** - Set this to **1** to prevent *diab* passing EDNS info to any UPSTREAM DoH/DoT servers (via routedns) (default is **0**)
+* **DIAB_ENABLE_OUTBOUND_PRIVACY** - Set this to **1** to prevent *diab* passing EDNS info to any UPSTREAM DoH/DoT servers (default is **0**)
 * **DIAB_ALLOWED_EXTERNALLY** - Set this to a comma separated list of hostnames you want untrusted hosts to be able to resolve.  **One should be your WireGuard hostname** (i.e. *vpn.yoursubdomain.yourdomain.com*)
 * **DIAB_ENABLE_LOGGING** - Set this to **1** to enable textual messages in the Docker logs/stdout
 * **DIAB_ENABLE_ADVANCED_LOGGING** - Set this to **1** to enable verbose messaging from dnsdist itself
@@ -261,7 +259,7 @@ Assuming your pihole container is called pihole, the above will get you to a pih
 If you have not used dnsdist or *diab* before, it is advisable you
 - set your required environment variables (per the above)
 - ensure /ssl can be mounted to the container
-- ideally ensure /etc/dnsdist and /etc/routedns are bind mounts to give you persistent configuration
+- ideally ensure /etc/dnsdist is a bind mount to give you persistent configuration
 - start your container!
 
 Once configured and started, *diab* will check for the existence of /etc/dnsdist/dnsdist.conf<br/>
@@ -307,7 +305,6 @@ Device -> DoH Query 443 -> *diab* DoT port 443 -> Allow<br/>
 ## Onward resolution (*diab* to the outside)
 
 *diab* will resolve from the servers specified in **DIAB_UPSTREAM_IP_AND_PORT**, in the order specified.
-If a remote DoH or DoT server was specified, routedns is used to create an internal 'bridge' between dnsdist and the DoH and DoT server.
 
 *diab* will use the servers specified to create DNS, DoH, DoT or DNSCrypt connections accordingly, thus you *must* specify servers thus:
 * DNS : IP:53 (i.e. 8.8.8.8:53)
