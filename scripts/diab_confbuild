@@ -155,7 +155,11 @@ EOF
                         if [ $IPV6 -eq 1 ]; then
                                 echo "webserver(\"::8083/0\")" >> /etc/dnsdist/dnsdist.conf
                         fi
-                        echo "setWebserverConfig({password=\"$DIAB_WEB_PASSWORD\", apiKey=\"$DIAB_WEB_APIKEY\", acl=\"$DIAB_TRUSTED_LANS,127.0.0.1\"})" >> /etc/dnsdist/dnsdist.conf
+			# Build hashed password
+			HashedCLIPW=`echo "hashPassword(\"$DIAB_WEB_PASSWORD\")" | dnsdist -l 127.0.0.1:999 | tail -1`
+			HashedCLIAPI=`echo "hashPassword(\"$DIAB_WEB_APIKEY\")" | dnsdist -l 127.0.0.1:999 | tail -1`
+			# Set in config 
+                        echo "setWebserverConfig({password=\"$HashedCLIPW\", apiKey=\"$HashedCLIAPI\", acl=\"$DIAB_TRUSTED_LANS,127.0.0.1\", hashPlaintextCredentials=true})" >> /etc/dnsdist/dnsdist.conf
                         echo "# DIAB : INFO    : Webserver will also be available on IPV6 port 8083"
                 fi
                 # Remove DIAB_WEB_PASSWORD from ENV
@@ -249,11 +253,11 @@ setECSOverride(true)
 EOF
 	# Check the outbound privacy settings
 	if [ $DIAB_ENABLE_OUTBOUND_PRIVACY ]; then
-		if [ $DIAB_ENABLE_OUTBOUND_PRIVACY -eq 1 ]
+		if [ $DIAB_ENABLE_OUTBOUND_PRIVACY -eq 1 ]; then
 			cat << EOF >> /etc/dnsdist/dnsdist.conf
 setECSSourcePrefixV4(16)
 setECSSourcePrefixV6(64)
-EOF			
+EOF
 		else
 			cat << EOF >> /etc/dnsdist/dnsdist.conf
 setECSSourcePrefixV4(32)
@@ -264,7 +268,7 @@ EOF
 		cat << EOF >> /etc/dnsdist/dnsdist.conf
 setECSSourcePrefixV4(32)
 setECSSourcePrefixV6(128)
-EOF	
+EOF
 	fi
 	cat << EOF >> /etc/dnsdist/dnsdist.conf
 setMaxTCPConnectionsPerClient(1000)   -- set X(int) for number of tcp connections from a single client. Useful for rate limiting the concurrent connections.

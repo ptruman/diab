@@ -26,6 +26,6 @@ if [ $DIAB_ENABLE_ADVANCED_LOGGING ]; then
 fi
 # Start dnsdist...
 echo "# DIAB : INFO    : Launching dnsdist..."
-dnsdist -C /etc/dnsdist/dnsdist.conf --supervised $advlog &
--proxy --config /etc/dnscrypt/dnscrypt-proxy.toml &
+dnscrypt-proxy --config /etc/dnscrypt/dnscrypt-proxy.toml &
+dnsdist -C /etc/dnsdist/dnsdist.conf --supervised $advlog
 
