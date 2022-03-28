@@ -65,25 +65,7 @@ else
         echo "# DIAB : INFO    : Next DNS hops requested as $DIAB_UPSTREAM_NAME ($DIAB_UPSTREAM_IP_AND_PORT)"
         # Create the config folders if not present...
         mkdir -p /etc/dnsdist
-        mkdir -p /etc/routedns
 	mkdir -p /etc/dnscrypt
-	# Check for routedns files and override flag
-        if [ -f "/etc/routedns/listeners.toml" ] && [ $OVERRIDE -eq 0 ]; then
-                echo "# DIAB : INFO    : Found existing /etc/routedns/listeners.toml - skipping blank creation"
-                CreateRouteDNSListeners=0
-        else
-                echo "# DIAB : INFO    : No existing /etc/routedns/listeners.toml found - creating shell"
-                CreateRouteDNSListeners=1
-                echo > /etc/routedns/listeners.toml
-        fi
-        if [ -f "/etc/routedns/resolvers.toml" ] && [ $OVERRIDE -eq 0 ]; then
-                echo "# DIAB : INFO    : Found existing /etc/routedns/resolvers.toml - skipping blank creation"
-                CreateRouteDNSResolvers=0
-        else
-                echo "# DIAB : INFO    : No existing /etc/routedns/resolvers.toml found - creating shell"
-                CreateRouteDNSResolvers=1
-                echo > /etc/routedns/resolvers.toml
-        fi
 	# Check for DNSCrypt files and override flag
 	if [ -f "/etc/dnscrypt/dnscrypt-proxy.toml" ] && [ $OVERRIDE -eq 0 ]; then
                 echo "# DIAB : INFO    : Found existing /etc/dnscrypt/dnscrypt-proxy.toml - skipping blank creation"
@@ -424,112 +406,19 @@ EOF
                 if [ $WorkingPrefix == "https" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoH server"
                         if [ $Identified -eq 0 ]; then
-                                if [ $CreateRouteDNSListeners -eq 1 ]; then
-                                        echo "# DIAB : INFO    : Building routedns listener config for $i (DoH)"
-                                        cat << EOF >> /etc/routedns/resolvers.toml
-[resolvers.routedns$WorkingCount]
-address = "$i{?dns}"
-protocol = "doh"
-EOF
-				fi
-                                if [ $DIAB_ENABLE_OUTBOUND_PRIVACY ]; then
-                                        if [ $DIAB_ENABLE_OUTBOUND_PRIVACY -eq 1 ]; then
-                                                cat << EOF >> /etc/routedns/resolvers.toml
-ecs-op = "privacy"
-ecs-prefix4 = 16
-ecs-prefix6 = 64
-EOF
-                                        fi
-                                fi
-                                if [ $CreateRouteDNSResolvers -eq 1 ]; then
-                                        echo "# DIAB : INFO    : Building routedns resolver config for $i (DoH)"
-                                        cat << EOF >> /etc/routedns/listeners.toml
-[listeners.routedns$WorkingCount-udp]
-address = "$V4INT$WorkingCount"
-protocol = "udp"
-resolver = "routedns$WorkingCount"
+			
+#				>>>> ADD DOH HERE
 
-[listeners.routedns$WorkingCount-tcp]
-address = "$V4INT$WorkingCount"
-protocol = "tcp"
-resolver = "routedns$WorkingCount"
-EOF
-					if [ $IPV6 -eq 1 ]; then
-	                                        cat << EOF >> /etc/routedns/resolvers.toml
-[listeners.routedns$WorkingCount-udp]
-address = "::900$WorkingCount/$V6TAIL"
-protocol = "udp"
-resolver = "routedns$WorkingCount"
-
-[listeners.routedns$WorkingCount-tcp]
-address = "::900$WorkingCount/V6TAIL"
-protocol = "tcp"
-resolver = "routedns$WorkingCount"
-EOF
-					fi
-                                        cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="127.0.0.1:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
-EOF
-                                fi
                                 Identified=1
                         fi
                 fi
                 if [ $WorkingSuffixa == "853" ]; then
                         echo "# DIAB : INFO    : $i appears to be a DoT server"
                         if [ $Identified -eq 0 ]; then
-                                if [ $CreateRouteDNSListeners -eq 1 ]; then
-                                        echo "# DIAB : INFO    : Building routedns listener config for $i (DoT)"
-                                        cat << EOF >> /etc/routedns/resolvers.toml
-[resolvers.routedns$WorkingCount]
-address = "$i"
-protocol = "dot"
-EOF
-                                fi
-                                if [ $DIAB_ENABLE_OUTBOUND_PRIVACY ]; then
-                                        if [ $DIAB_ENABLE_OUTBOUND_PRIVACY -eq 1 ]; then
-                                                cat << EOF >> /etc/routedns/resolvers.toml
-ecs-op = "privacy"
-ecs-prefix4 = 16
-ecs-prefix6 = 64
-EOF
-                                        fi
-                                fi
-                                if [ $CreateRouteDNSResolvers -eq 1 ]; then
-                                        echo "# DIAB : INFO    : Building routedns resolver config for $i (DoT)"
-                                        cat << EOF >> /etc/routedns/listeners.toml
-[listeners.routedns$WorkingCount-udp]
-address = "$V4INT$WorkingCount"
-protocol = "udp"
-resolver = "routedns$WorkingCount"
 
-[listeners.routedns$WorkingCount-tcp]
-address = "$V4INT$WorkingCount"
-protocol = "tcp"
-resolver = "routedns$WorkingCount"
-EOF
-                                        if [ $IPV6 -eq 1 ]; then
-                                                cat << EOF >> /etc/routedns/resolvers.toml
-[listeners.routedns$WorkingCount-udp]
-address = "::900$WorkingCount/$V6TAIL"
-protocol = "udp"
-resolver = "routedns$WorkingCount"
+#				>>> ADD DOT HERE
 
-[listeners.routedns$WorkingCount-tcp]
-address = "::900$WorkingCount/$V6TAIL"
-protocol = "tcp"
-resolver = "routedns$WorkingCount"
-EOF
-					fi
-
-
-                                        cat << EOF >> /etc/dnsdist/dnsdist.conf
-newServer({address="127.0.0.1:900$WorkingCount",name="$USN",$UCSInsertion$IntervalInsertion,order=$TempCount})
-EOF
-                                        # if [ $IPV6 -eq 1 ]; then
-                                        #         echo "newServer({address=\"0.0.0.0:900$WorkingCount\",name=\"$USN\",$UCSInsertion$IntervalInsertion,order=$TempCount})" >> /etc/dnsdist/dnsdist.conf
-                                        # fi
-                                fi
-                                Identified=1
+				Identified=1
                         fi
                 fi
                 if [ $WorkingSuffixb == "53" ]; then
