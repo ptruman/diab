@@ -8,18 +8,16 @@ RUN apt update -y && apt upgrade -y
 # Switch into /tmp
 WORKDIR /tmp
 # Get wget, bzip2, dnsdist-1.6 src & golang - then unzip & untar everything...
-RUN apt-get install -y wget bzip2 && wget https://downloads.powerdns.com/releases/dnsdist-1.6.0.tar.bz2 && \
+RUN apt-get install -y wget bzip2 && wget https://downloads.powerdns.com/releases/dnsdist-1.7.0.tar.bz2 && \
         wget https://golang.org/dl/go1.15.4.linux-amd64.tar.gz && \
         bzip2 -d dnsdist*.bz2 && tar -xvf dnsdist*.tar && rm dnsdist*.tar && \
         gunzip go1.15.4.linux-amd64.tar.gz && tar -xvf go1.15.4.linux-amd64.tar && rm go1.15.4.linux-amd64.tar
 # Install all required libraries/packages to support the build (quite a few!)
 RUN apt-get install -y libboost-dev lua5.3 libedit-dev libsodium-dev ragel libtool gcc g++ make libprotobuf-dev libre2-dev pkg-config liblua5.3-dev libssl-dev libh2o-dev libh2o-evloop-dev libfstrm-dev libsnmp-dev liblmdb++-dev libprotobuf-c-dev protobuf-compiler libsnmp-dev libcdb-dev golang 
-# Build routedns (to be used for egress capabilities)
-RUN GO111MODULE=on /tmp/go/bin/go get -v github.com/folbricht/routedns/cmd/routedns && chown -R root:root ./go
 # Build dnstap binary (to be used if deep logging is required)
 RUN GO111MODULE=on /tmp/go/bin/go get -u github.com/dnstap/golang-dnstap/dnstap && chown -R root:root ./go
 # Switch into dnsdist src folder
-WORKDIR /tmp/dnsdist-1.6.0
+WORKDIR /tmp/dnsdist-1.7.0
 # Build (statically) with DNSCrypt, DoT, DoH support, plus dnstab, protobuf, re2, SNMP and some sanitisation
 # NB : The following switches were previously enabled, but are now disabled : --enable-asan --enable-lsan --enable-ubsan
 RUN ./configure --enable-dnscrypt --enable-static --enable-dns-over-tls --enable-dns-over-https --enable-dnstap --with-protobuf --with-re2 --with-net-snmp
@@ -31,9 +29,8 @@ WORKDIR /
 # Create the actual "live" image
 # Set base image (NB: There may be potential switch to "buster" from "latest" - TBC)
 FROM bitnami/minideb:latest
-# Copy over the key binaries dnsdist, routedns & dnstap from the dnsdistbuild image above
+# Copy over the key binaries dnsdist & dnstap from the dnsdistbuild image above
 COPY --from=dnsdistbuild /usr/local/bin/dnsdist /usr/local/bin/dnsdist
-COPY --from=dnsdistbuild /root/go/bin/routedns /usr/local/bin/routedns
 COPY --from=dnsdistbuild /root/go/bin/dnstap /usr/local/bin/dnstap
 # Install all required libraries/packages to support the build (quite a few!)
 # NB : The following packages were previously required, but are now disabled : libasan5 libubsan1 / liblsan0
