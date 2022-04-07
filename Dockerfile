@@ -54,7 +54,7 @@ COPY ./scripts/diab_disable_dnstap /usr/sbin/diab_cli
 # Set all scripts executable
 RUN chmod u+rx /usr/sbin/diab*
 # Create the docker healthcheck call to the healthcheck script
-HEALTHCHECK  --interval=5m --timeout=3s \
+HEALTHCHECK  --interval=5m --timeout=3s --start-period=30s\
         CMD /usr/sbin/diab_healthcheck.sh
 # Setup the default command (entrypoint is blank)
 CMD ["/usr/sbin/diab_startup.sh"]
