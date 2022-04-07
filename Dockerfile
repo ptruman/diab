@@ -1,7 +1,7 @@
 # diab V3.0 Dockerfile
 # 
 # Create the temporary "dnsdistbuild" image to generate required binaries
-# Set base image (NB: There may be potential switch to "buster" from "latest" - TBC)
+# Set base image 
 FROM bitnami/minideb:latest as dnsdistbuild
 # Baseline the image to latest default packages
 RUN apt update -y && apt upgrade -y
@@ -27,7 +27,7 @@ RUN make install
 WORKDIR /
 
 # Create the actual "live" image
-# Set base image (NB: There may be potential switch to "buster" from "latest" - TBC)
+# Set base image 
 FROM bitnami/minideb:latest
 # Copy over the key binaries dnsdist & dnstap from the dnsdistbuild image above
 COPY --from=dnsdistbuild /usr/local/bin/dnsdist /usr/local/bin/dnsdist
