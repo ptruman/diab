@@ -332,6 +332,7 @@ The following additional commands are available within the diab host shell:
 
 # Known Issues
 
+## All resolvers down
 diab will sometimes start and mark all configured resolvers as down.  This is obviously a problem.
 You can either:
 
@@ -339,3 +340,10 @@ You can either:
 * If the above does not work, delete any mounted dnsdist.conf OR access the container CLI and run **diab_confbuild.sh OVERRIDE** - then restart the container.
 
 For some reason, rebuilding the configuration file (even if nothing has changed) seems to coax dnsdist to start correctly.
+
+## Traefik router won't start
+Traefik will not add (or start) a router if the container reports 'unhealthy'.
+If a server gets marked down, the diab container will mark itself as unhealthy, which may cause the Traefik router to not start, or stop if running.
+This can be a problem for DoH services.
+
+If this becomes an issue, consider a direct DNS A/CNAME record to the IP of your diab host to bypass Traefik - or resolve the issues with the remote server.
