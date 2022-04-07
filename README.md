@@ -161,7 +161,9 @@ So - let's run the above example through:
 * **DIAB_FORCEREBUILD** - Set this to 1 if you want *diab* to rebuild configuration on every startup
 * **DIAB_MAX_QUEUE** - Set this to the number of queued queries you want to allow before *diab* fails to the next server (default is **10**) 
 * **DIAB_MAX_DROPS** - Set this to the number of dropped queries you want to allow before *diab* fails to the next server (default is **10**)
-* 
+* **DIAB_HEALTHCHECK** - Set this to **0** if you want diab to **not** run it's healtchecks (see *Known Issues* below)
+* **DIAB_VERBOSE_HEALTH** - Set this to **1** if you want to see dedicated healthcheck output
+
 ## Network Requirements
 
 It is **highly** recommended you run the container either on a macvlan interface with it's own IP *or* in host mode (assuming your host is not running DNS and/or HTTPs already).  If you choose to run in bridge mode, *you* will need to handle all port forwarding yourself, and DoT/DoH may fail - and **no support will be offered**.
@@ -336,6 +338,27 @@ You can either:
 * If the above does not work, delete any mounted dnsdist.conf OR access the container CLI and run **diab_confbuild.sh OVERRIDE** - then restart the container.
 
 For some reason, rebuilding the configuration file (even if nothing has changed) seems to coax dnsdist to start correctly.
+
+# Known Issues
+
+## All resolvers down
+diab will sometimes start and mark all configured resolvers as down.  This is obviously a problem.
+You can either:
+
+* Access the container CLI and run **diab_forceup.sh** - which will forcibly mark the servers as up.  This may resolve the issue.
+* If the above does not work, delete any mounted dnsdist.conf OR access the container CLI and run **diab_confbuild.sh OVERRIDE** - then restart the container.
+
+For some reason, rebuilding the configuration file (even if nothing has changed) seems to coax dnsdist to start correctly.
+
+## Traefik router won't start
+Traefik will not add (or start) a router if the container reports 'unhealthy'.
+If a server gets marked down, the diab container will mark itself as unhealthy, which may cause the Traefik router to not start, or stop if running.
+This can be a problem for DoH services and anything configured to use them.
+
+If this becomes an issue, consider either:
+1. adding a direct DNS A/CNAME record to the IP of your diab host to bypass Traefik
+2. resolving the issues with the remote server to stop it failing
+3. running the container with DIAB_HEALTCHECK set to **0** which will stop healthchecks and report the container as healthy in all conditions
 
 # Disclaimer
 
