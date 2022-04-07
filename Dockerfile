@@ -42,7 +42,6 @@ COPY ./scripts/diab_confbuild /usr/sbin/diab_confbuild
 COPY ./scripts/diab_startup /usr/sbin/diab_startup
 COPY ./scripts/diab_healthcheck /usr/sbin/diab_healthcheck
 COPY ./scripts/diab_health_script /usr/sbin/diab_health_script
-COPY ./scripts/diab_health_json /usr/sbin/diab_health_json
 COPY ./scripts/diab_forceup /usr/sbin/diab_forceup
 COPY ./scripts/diab_rescue /usr/sbin/diab_rescue
 COPY ./scripts/diab_cli /usr/sbin/diab_cli
