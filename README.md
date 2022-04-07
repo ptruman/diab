@@ -160,10 +160,11 @@ So - let's run the above example through:
 * **DIAB_WEB_PASSWORD** - Set to whatever you want your webserver password to be.  The username can be anything.  Overridden if you use DIAB_WEB_PASSWORD_FILE.
 * **DIAB_WEB_PASSWORD_FILE** - Set this to /var/run/secrets/DIAB_WEB_PASSWORD_FILE if you want to map a Docker secrets file for the web password.
 * **DIAB_WEB_APIKEY** - Set to whatever you want to use as your dnsdist web API key.  *diab* will generate one for you if not supplied (the reverse of DIAB_WEB_PASSWORD)
-* **DIAB_FORCEREBUILD** - Set this to 1 if you want *diab* to rebuild configuration on every startup
+* **DIAB_FORCEREBUILD** - Set this to **1** if you want *diab* to rebuild configuration on every startup
 * **DIAB_MAX_QUEUE** - Set this to the number of queued queries you want to allow before *diab* fails to the next server (default is **10**) 
 * **DIAB_MAX_DROPS** - Set this to the number of dropped queries you want to allow before *diab* fails to the next server (default is **10**)
-* 
+* **DIAB_HEALTHCHECK** - Set this to **0** if you want diab to **not** run it's healtchecks (see *Known Issues* below)
+* **DIAB_VERBOSE_HEALTH** - Set this to **1** if you want to see dedicated healthcheck output
 ## Network Requirements
 
 It is **highly** recommended you run the container either on a macvlan interface with it's own IP *or* in host mode (assuming your host is not running DNS and/or HTTPs already).  If you choose to run in bridge mode, *you* will need to handle all port forwarding yourself, and DoT/DoH may fail - and **no support will be offered**.
@@ -344,6 +345,9 @@ For some reason, rebuilding the configuration file (even if nothing has changed)
 ## Traefik router won't start
 Traefik will not add (or start) a router if the container reports 'unhealthy'.
 If a server gets marked down, the diab container will mark itself as unhealthy, which may cause the Traefik router to not start, or stop if running.
-This can be a problem for DoH services.
+This can be a problem for DoH services and anything configured to use them.
 
-If this becomes an issue, consider a direct DNS A/CNAME record to the IP of your diab host to bypass Traefik - or resolve the issues with the remote server.
+If this becomes an issue, consider either:
+* adding a direct DNS A/CNAME record to the IP of your diab host to bypass Traefik
+* resolving the issues with the remote server to stop it failing
+* running the container with DIAB_HEALTCHECK set to **0** which will stop healthchecks and report the container as healthy in all conditions
