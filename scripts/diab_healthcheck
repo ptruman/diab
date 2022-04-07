@@ -1,0 +1,23 @@
+#!/bin/bash
+# DIAB Healthcheck Script
+#
+# Assume we are healthy...
+HealthCheck=0
+# Check for DIAB_HEALTHCHECK variable...
+if [ $DIAB_HEALTHCHECK ]; then
+        # Is DIAB_HEALTHCHECK set to 0 (disable)?
+        if [ $DIAB_HEALTHCHECK == 0 ]; then
+                # Force a healthy status
+                HealthCheck=0
+        else
+                # Run the health check
+                /usr/sbin/diab_health_script
+                HealthCheck=$?
+        fi
+else
+        # Run the health check
+        /usr/sbin/diab_health_script
+        HealthCheck=$?
+fi
+# Report the health status!
+exit $HealthCheck

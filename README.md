@@ -8,7 +8,6 @@ The initial use-case is outlined below and may be surprisingly useful for many. 
 This container makes use of:
  - the [bitnami/minideb](https://hub.docker.com/r/bitnami/minideb/) image
  - the totally wonderful [dnsdist](https://dnsdist.org) - which provides the DoH, DoT and DNS front end functionality
- - routedns (https://github.com/folbricht/routedns) for DoT and DoH backend support (will be removed in 3.0, as dnsdist 1.7 supports natively)
  - dnscrypt-proxy to enable use of remote DNSCrypt servers (such as OpenDNS)
  - a modified version of orderedLeastOutstanding (https://github.com/sysadminblog/dnsdist-configs/blob/master/orderedLeastOutstanding.lua)
  - dnstap for DNS logging and debugging (https://github.com/dnstap/golang-dnstap)
@@ -131,11 +130,10 @@ So - let's run the above example through:
 
 * `/your/ssl/folder:/ssl:ro` (**needed** for DoH and/or DoT - if enabled, it **must** contain *cert.pem* and *key.pem*)
 * `/your/dnsdist/config/folder:/etc/dnsdist` (optional - see below)
-* `/your/routedns/config/folder:/etc/routedns` (optional - see below)
 * `/etc/localtime:/etc/localtime:ro` (optional *but* ensures correct timestamps)
 * `/etc/timezone:/etc/timezone:ro` (optional *but* ensures correct timestamps)
 
-**Note** : If you don't create bind mounts for /etc/dnsdist and /etc/routedns, your configuration will not persist container recreation.  If *diab* doesn't find existing configuration files on startup, it will (re)create the necessary ones.  If you want to 'tweak' your setup once *diab* has got you going, mounted configs are the way to go.
+**Note** : If you don't create a bind mount for /etc/dnsdist, your configuration will not persist container recreation.  If *diab* doesn't find existing configuration files on startup, it will (re)create the necessary ones.  If you want to 'tweak' your setup once *diab* has got you going, mounted configs are the way to go.
 
 ## Environment
 
@@ -146,7 +144,7 @@ So - let's run the above example through:
 * **DIAB_ENABLE_DOH** - Set this to **1** to enable DoT. It will run on 0.0.0.0:443 - and **requires** /ssl/cert.pem and /ssl/key.pem to be available via the /ssl bind mount volume above.
 ** It will *also* enable an "insecure" DOH server on 0.0.0.0:8053 - which you can use with Traefik, nginx or HAproxy (see below)
 * **DIAB_ENABLE_INBOUND_PRIVACY** - Set this to **1** to prevent *diab* passing EDNS info to your UPSTREAM servers (i.e. piHole).  If you are using piHole and want client identification to work, you need to set this to 0, or just not set it (default is **0**)
-* **DIAB_ENABLE_OUTBOUND_PRIVACY** - Set this to **1** to prevent *diab* passing EDNS info to any UPSTREAM DoH/DoT servers (via routedns) (default is **0**)
+* **DIAB_ENABLE_OUTBOUND_PRIVACY** - Set this to **1** to prevent *diab* passing EDNS info to any UPSTREAM DoH/DoT servers (default is **0**)
 * **DIAB_ALLOWED_EXTERNALLY** - Set this to a comma separated list of hostnames you want untrusted hosts to be able to resolve.  **One should be your WireGuard hostname** (i.e. *vpn.yoursubdomain.yourdomain.com*)
 * **DIAB_ENABLE_LOGGING** - Set this to **1** to enable textual messages in the Docker logs/stdout
 * **DIAB_ENABLE_ADVANCED_LOGGING** - Set this to **1** to enable verbose messaging from dnsdist itself
@@ -155,8 +153,8 @@ So - let's run the above example through:
 * **DIAB_UPSTREAM_IP_AND_PORT** - Set this to a comma separated list of IPs and ports of your chosen DNS server (i.e. *1.2.3.4:53,2.3.4.5:53*)
 * **DIAB_UPSTREAM_NAME** - Set this to a comma spearated list of friendly names for your chosen DNS servers (i.e. *piHole*) - they will show in the web interface and logs
 * **DIAB_ENABLE_STRICT_ORDER** - Set this to 1 if you want *diab* to **only** use upstream servers in the order specified (default is **0**)
-* **DIAB_OPEN_INTERMEDIATE** - Set this to 1 if you want *diab* to make it's internal ports open to everyone internally (default is **0**)
-  * NB : You will need this if you want to point diab -> piHole -> diab DNSCrypt etc.
+* **DIAB_OPEN_INTERMEDIATE** - Set this to 1 if you want *diab* to make any DNSCrypt forwarders open to everyone internally (default is **0**)
+  * NB : You will need this if you want to point diab -> piHole -> diab DNSCrypt etc.  DIAB listeners are always open to 0.0.0.0 - restrict access via DIAB_TRUSTED_LANS
 * **DIAB_WEB_PASSWORD** - Set to whatever you want your webserver password to be.  The username can be anything.  Overridden if you use DIAB_WEB_PASSWORD_FILE.
 * **DIAB_WEB_PASSWORD_FILE** - Set this to /var/run/secrets/DIAB_WEB_PASSWORD_FILE if you want to map a Docker secrets file for the web password.
 * **DIAB_WEB_APIKEY** - Set to whatever you want to use as your dnsdist web API key.  *diab* will generate one for you if not supplied (the reverse of DIAB_WEB_PASSWORD)
@@ -165,6 +163,7 @@ So - let's run the above example through:
 * **DIAB_MAX_DROPS** - Set this to the number of dropped queries you want to allow before *diab* fails to the next server (default is **10**)
 * **DIAB_HEALTHCHECK** - Set this to **0** if you want diab to **not** run it's healtchecks (see *Known Issues* below)
 * **DIAB_VERBOSE_HEALTH** - Set this to **1** if you want to see dedicated healthcheck output
+
 ## Network Requirements
 
 It is **highly** recommended you run the container either on a macvlan interface with it's own IP *or* in host mode (assuming your host is not running DNS and/or HTTPs already).  If you choose to run in bridge mode, *you* will need to handle all port forwarding yourself, and DoT/DoH may fail - and **no support will be offered**.
@@ -262,7 +261,7 @@ Assuming your pihole container is called pihole, the above will get you to a pih
 If you have not used dnsdist or *diab* before, it is advisable you
 - set your required environment variables (per the above)
 - ensure /ssl can be mounted to the container
-- ideally ensure /etc/dnsdist and /etc/routedns are bind mounts to give you persistent configuration
+- ideally ensure /etc/dnsdist is a bind mount to give you persistent configuration
 - start your container!
 
 Once configured and started, *diab* will check for the existence of /etc/dnsdist/dnsdist.conf<br/>
@@ -308,7 +307,6 @@ Device -> DoH Query 443 -> *diab* DoT port 443 -> Allow<br/>
 ## Onward resolution (*diab* to the outside)
 
 *diab* will resolve from the servers specified in **DIAB_UPSTREAM_IP_AND_PORT**, in the order specified.
-If a remote DoH or DoT server was specified, routedns is used to create an internal 'bridge' between dnsdist and the DoH and DoT server.
 
 *diab* will use the servers specified to create DNS, DoH, DoT or DNSCrypt connections accordingly, thus you *must* specify servers thus:
 * DNS : IP:53 (i.e. 8.8.8.8:53)
@@ -348,6 +346,13 @@ If a server gets marked down, the diab container will mark itself as unhealthy, 
 This can be a problem for DoH services and anything configured to use them.
 
 If this becomes an issue, consider either:
-* adding a direct DNS A/CNAME record to the IP of your diab host to bypass Traefik
-* resolving the issues with the remote server to stop it failing
-* running the container with DIAB_HEALTCHECK set to **0** which will stop healthchecks and report the container as healthy in all conditions
+
+1. adding a direct DNS A/CNAME record to the IP of your diab host to bypass Traefik
+2. resolving the issues with the remote server to stop it failing
+3. running the container with DIAB_HEALTCHECK set to **0** which will stop healthchecks and report the container as healthy in all conditions
+
+# Disclaimer
+
+The author is a 'single contributor' and testing is limited to one or two specific use cases.
+Your mileage may vary.  EDNS/privacy behaving (or not) is not a guarantee and you are advised to sniff your own traffic to satisfy if things are working as you intend!
+
