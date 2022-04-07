@@ -2,7 +2,7 @@
 # DIAB Healthcheck Script
 #
 HealthCheck=0
-if [ -f $DIAB_HEALTHCHECK_SCRIPT ]; then
+if [ $DIAB_HEALTHCHECK_SCRIPT ]; then
         /usr/sbin/diab_health_json
         HealthCheck=$?
 else
