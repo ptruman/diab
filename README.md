@@ -39,6 +39,9 @@ The assumption is that you already do (or want to do) the following:
 - *Don't* want to make your DNS/piHole "public" facing (anyone might find/use it!)
 - Just make it all look seamless!
 
+![Example Use Case](https://github.com/ptruman/imagepile/blob/main/diab/diab.png?raw=true)
+The above image shows internal *and* external clients accessing *diab*, which provides plain DNS, DoT, DoH and DNSCrypt listeners, routing them to a chosen server (in this case piHole, also internally, *and* letting piHole re-use the DNSCrypt listener to deal with the actual external lookup - via OpenDNS in the example.  If piHole stops working, diab failsover to use DNSCrypt.
+
 If you want to setup your own Linux, OMV, Docker, Traefik and piHole box - read our article [https://site.gothtech.co.uk/articles/omv-portainer-traefik-letsencrypt](here).
 
 If you want to setup WireGuard with the above - read our article [https://site.gothtech.co.uk/articles/omv-portainer-traefik-letsencrypt/wireguard-traefik](here).
