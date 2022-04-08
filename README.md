@@ -40,7 +40,7 @@ The assumption is that you already do (or want to do) the following:
 - Just make it all look seamless!
 
 ![Example Use Case](https://github.com/ptruman/imagepile/blob/main/diab/diab.png?raw=true)
-The above image shows internal *and* external clients accessing *diab*, which provides plain DNS, DoT, DoH and DNSCrypt listeners, routing them to a chosen server (in this case piHole, also internally, *and* letting piHole re-use the DNSCrypt listener to deal with the actual external lookup - via OpenDNS in the example.  If piHole stops working, diab failsover to use DNSCrypt.
+The above image shows internal *and* external clients accessing *diab*, which provides plain DNS, DoT, DoH and DNSCrypt listeners, routing them to a chosen server (in this case piHole, also internally *and* letting piHole re-use the DNSCrypt listener to deal with the actual external lookup - via OpenDNS).  If the first listener (piHole) stops working, diab failsover to the next (DNSCrypt).
 
 If you want to setup your own Linux, OMV, Docker, Traefik and piHole box - read our article [https://site.gothtech.co.uk/articles/omv-portainer-traefik-letsencrypt](here).
 
@@ -353,6 +353,12 @@ If this becomes an issue, consider either:
 1. adding a direct DNS A/CNAME record to the IP of your diab host to bypass Traefik
 2. resolving the issues with the remote server to stop it failing
 3. running the container with DIAB_HEALTCHECK set to **0** which will stop healthchecks and report the container as healthy in all conditions
+
+# What's next?
+
+Lates versions of diab will:
+1. switch to use dnsdist's internal DNSCrypt listener (inbound only), and loop to DNSCrypt-proxy as necessary.
+2. provide additional optionally openable listeners for all backends, to enable selective looping & routing
 
 # Disclaimer
 
