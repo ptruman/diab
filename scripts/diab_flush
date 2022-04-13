@@ -1,0 +1,3 @@
+#!/bin/bash
+echo "# DIAB : INFO    : Flushing cache"
+echo "getPool(\"\"):getCache():expunge(0)" | diab_cli
