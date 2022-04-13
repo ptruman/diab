@@ -47,6 +47,7 @@ COPY ./scripts/diab_rescue /usr/sbin/diab_rescue
 COPY ./scripts/diab_cli /usr/sbin/diab_cli
 COPY ./scripts/diab_enable_dnstap /usr/sbin/diab_enable_dnstap
 COPY ./scripts/diab_disable_dnstap /usr/sbin/diab_disable_dnstap
+COPY ./scripts/diab_flush /usr/sbin/diab_flush
 # Set all scripts executable
 RUN chmod u+rx /usr/sbin/diab*
 # Create the docker healthcheck call to the healthcheck script
