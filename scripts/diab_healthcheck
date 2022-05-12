@@ -27,6 +27,10 @@ if [ $DIAB_ENABLE_CLI ]; then
                 # CLI is disabled, we can't run...
                 OkToRun=0
         fi
+else
+        # CLI is disabled, we can't run...
+        OkToRun=0
+fi
 # Check run status...
 if [ $OkToRun -eq 1 ]; then
         # Run the HealthCheck
