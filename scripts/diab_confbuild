@@ -636,8 +636,10 @@ setServerPolicyLua("orderedLeastOutstanding", orderedLeastOutstanding)
 EOF
 		fi
 	fi
+	# Check if CLI access should be enabled
         if [ $DIAB_ENABLE_CLI ]; then
                 if [ $DIAB_ENABLE_CLI -eq 1 ]; then
+			# Enable CLI
                         echo "# DIAB : INFO    : Enabling CLI access on port 5199..."
                         echo "# DIAB : INFO    : CLI is accessible from within the container by running:"
                         echo "                   dnsdist -c -C /etc/dnsdist/dnsdist.conf"
@@ -646,8 +648,21 @@ EOF
                         echo "controlSocket('127.0.0.1:5199')" >> /etc/dnsdist/dnsdist.conf
                         if [ $IPV6 -eq 1 ]; then
                                 echo "controlSocket('[::1]:5199')" >> /etc/dnsdist/dnsdist.conf
+				
                         fi
-                        echo $secureKey >> /etc/dnsdist/dnsdist.conf
+			echo $secureKey >> /etc/dnsdist/dnsdist.conf
+			# Disable CLI connection logging to avoid log spam
+			echo "setConsoleConnectionsLogging(disabled)" >> /etc/dnsdist/dnsdist.conf
+		else
+			# Check if CLI is disabled, but HealthCheck enabled (latter requires the former)
+			if [ $DIAB_HEALTHCHECK ]; then
+				if [ $DIAB_HEALTHCHECK -eq 1 ]; then
+					echo "# DIAB : WARNING : DIAB_ENABLE_CLI is disabled, but DIAB_HEALTHCHECK is enabled."
+					echo "# DIAB : WARNING : DIAB_HEALTHCHECK requires DIAB_ENABLE_CLI to be enabled."
+					echo "# DIAB : WARNING : DIAB_HEALTHCHECK is now DISABLED to allow operation.  Please amend your configuration."
+					export DIAB_HEALTHCHECK=0;
+				fi
+			fi	
                 fi
         fi
         echo "# DIAB : INFO    : diab V$DV configurator finished!"
