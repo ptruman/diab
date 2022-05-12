@@ -3,21 +3,38 @@
 #
 # Assume we are healthy...
 HealthCheck=0
+OkToRun=0
 # Check for DIAB_HEALTHCHECK variable...
 if [ $DIAB_HEALTHCHECK ]; then
         # Is DIAB_HEALTHCHECK set to 0 (disable)?
-        if [ $DIAB_HEALTHCHECK == 0 ]; then
-                # Force a healthy status
-                HealthCheck=0
+        if [ $DIAB_HEALTHCHECK -eq 0 ]; then
+                # Don't run (will force ok)
+                OkToRun=0
         else
-                # Run the health check
-                /usr/sbin/diab_health_script
-                HealthCheck=$?
+                # HealthCheck is ENABLED
+                OkToRun=1
         fi
 else
-        # Run the health check
+        # Run by default
+        OkToRun=1
+fi
+# Check if CLI is enabled (required for HealthCheck to run)
+if [ $DIAB_ENABLE_CLI ]; then
+        if [ $DIAB_ENABLE_CLI -eq 1 ]; then
+                # We can run...
+                OkToRun=1
+        else
+                # CLI is disabled, we can't run...
+                OkToRun=0
+        fi
+# Check run status...
+if [ $OkToRun -eq 1 ]; then
+        # Run the HealthCheck
         /usr/sbin/diab_health_script
         HealthCheck=$?
+else
+        # Force a healthy status
+        HealthCheck=0
 fi
 # Report the health status!
 exit $HealthCheck
