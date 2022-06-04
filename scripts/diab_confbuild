@@ -652,7 +652,7 @@ EOF
                         fi
 			echo $secureKey >> /etc/dnsdist/dnsdist.conf
 			# Disable CLI connection logging to avoid log spam
-			echo "setConsoleConnectionsLogging(disabled)" >> /etc/dnsdist/dnsdist.conf
+			echo "setConsoleConnectionsLogging(false)" >> /etc/dnsdist/dnsdist.conf
 		else
 			# Check if CLI is disabled, but HealthCheck enabled (latter requires the former)
 			if [ $DIAB_HEALTHCHECK ]; then
