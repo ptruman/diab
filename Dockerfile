@@ -7,6 +7,7 @@ RUN apt update -y && apt upgrade -y
 # Make Dockerfile ARG driven
 ARG DIABVERSION=3.1
 ARG DNSDISTVERSION=1.7.2
+RUN echo $DIABVERSION > /tmp/diab_version.txt
 # Switch into /tmp
 WORKDIR /tmp
 # Get wget, bzip2, dnsdist-1.7 src & golang - then unzip & untar everything...
@@ -34,6 +35,7 @@ FROM bitnami/minideb:latest
 # Copy over the key binaries dnsdist & dnstap from the dnsdistbuild image above
 COPY --from=dnsdistbuild /usr/local/bin/dnsdist /usr/local/bin/dnsdist
 COPY --from=dnsdistbuild /root/go/bin/dnstap /usr/local/bin/dnstap
+COPY --from=dnsdistbuild /tmp/diab_version.txt /etc/dnsdist/diab_version.txt
 # Install all required libraries/packages to support the build (quite a few!)
 # NB : The following packages were previously required, but are now disabled : libasan5 libubsan1 / liblsan0
 # NB : Enabling the asan/lsan/ubsan packages in dnsdistbuild WILL require these back in.
