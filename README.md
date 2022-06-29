@@ -379,5 +379,7 @@ To ensure you are using your DIAB instance fully, with WireGuard, you need to do
  - Open Chrome **Settings** > **Privacy and security** > **Use secure DNS**
  - Select **Chooose another provider**
  - Enter *https://dns.yoursubdomain.yourdomain.com/dns-query* (edit the DNS name as appropriate)
+
+NB : If your WireGuard connection drops, and your diab is secured to your WireGuard/internal IP range, you will lose all DNS resolution and need to 'unset' these.
  
 This will ensure your device, VPN *and* browser are using *diab*
