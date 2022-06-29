@@ -1,5 +1,7 @@
-# diab V3.0 Dockerfile
-# 
+# diab V3.1 Dockerfile
+# Make Dockerfile ARG driven
+ARG DIABVERSION=3.1
+ARG DNSDISTVERSION=1.7.2
 # Create the temporary "dnsdistbuild" image to generate required binaries
 # Set base image 
 FROM bitnami/minideb:latest as dnsdistbuild
@@ -8,7 +10,7 @@ RUN apt update -y && apt upgrade -y
 # Switch into /tmp
 WORKDIR /tmp
 # Get wget, bzip2, dnsdist-1.7 src & golang - then unzip & untar everything...
-RUN apt-get install -y wget bzip2 && wget https://downloads.powerdns.com/releases/dnsdist-1.7.0.tar.bz2 && \
+RUN apt-get install -y wget bzip2 && wget https://downloads.powerdns.com/releases/dnsdist-$DNSDISTVERSION.tar.bz2 && \
         wget https://golang.org/dl/go1.15.4.linux-amd64.tar.gz && \
         bzip2 -d dnsdist*.bz2 && tar -xvf dnsdist*.tar && rm dnsdist*.tar && \
         gunzip go1.15.4.linux-amd64.tar.gz && tar -xvf go1.15.4.linux-amd64.tar && rm go1.15.4.linux-amd64.tar
@@ -17,7 +19,7 @@ RUN apt-get install -y libboost-dev lua5.3 libedit-dev libsodium-dev ragel libto
 # Build dnstap binary (to be used if deep logging is required)
 RUN GO111MODULE=on /tmp/go/bin/go get -u github.com/dnstap/golang-dnstap/dnstap && chown -R root:root ./go
 # Switch into dnsdist src folder
-WORKDIR /tmp/dnsdist-1.7.0
+WORKDIR /tmp/dnsdist-$DNSDISTVERSION
 # Build (statically) with DNSCrypt, DoT, DoH support, plus dnstab, protobuf, re2, SNMP and some sanitisation
 # NB : The following switches were previously enabled, but are now disabled : --enable-asan --enable-lsan --enable-ubsan
 RUN ./configure --enable-dnscrypt --enable-static --enable-dns-over-tls --enable-dns-over-https --enable-dnstap --with-protobuf --with-re2 --with-net-snmp
@@ -37,7 +39,7 @@ COPY --from=dnsdistbuild /root/go/bin/dnstap /usr/local/bin/dnstap
 # NB : Enabling the asan/lsan/ubsan packages in dnsdistbuild WILL require these back in.
 RUN apt-get update -y && apt-get upgrade -y && apt-get install -y apt-utils liblua5.3-0 libedit2 libsodium23 libfstrm0 libsnmp30 libcdb1 libre2-5 liblmdb0 libh2o-evloop0.13 libprotobuf-dev dnscrypt-proxy curl jq ca-certificates 
 # Copy in the diab scripts to /usr/sbin
-COPY ./diab_version.txt /etc/dnsdist/diab_version.txt
+RUN echo $DIABVERSION > /etc/dnsdist/diab_version.txt
 COPY ./scripts/diab_confbuild /usr/sbin/diab_confbuild
 COPY ./scripts/diab_startup /usr/sbin/diab_startup
 COPY ./scripts/diab_healthcheck /usr/sbin/diab_healthcheck
