@@ -1,12 +1,12 @@
 # diab V3.1 Dockerfile
-# Make Dockerfile ARG driven
-ARG DIABVERSION=3.1
-ARG DNSDISTVERSION=1.7.2
 # Create the temporary "dnsdistbuild" image to generate required binaries
 # Set base image 
 FROM bitnami/minideb:latest as dnsdistbuild
 # Baseline the image to latest default packages
 RUN apt update -y && apt upgrade -y
+# Make Dockerfile ARG driven
+ARG DIABVERSION=3.1
+ARG DNSDISTVERSION=1.7.2
 # Switch into /tmp
 WORKDIR /tmp
 # Get wget, bzip2, dnsdist-1.7 src & golang - then unzip & untar everything...
