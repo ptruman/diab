@@ -365,3 +365,19 @@ Lates versions of diab will:
 The author is a 'single contributor' and testing is limited to one or two specific use cases.
 Your mileage may vary.  EDNS/privacy behaving (or not) is not a guarantee and you are advised to sniff your own traffic to satisfy if things are working as you intend!
 
+# Note for Android users
+
+Android has a few "gotchas" with regard to DNS.
+To ensure you are using your DIAB instance fully, with WireGuard, you need to do the following:
+
+1. If using a WireGuard client, set the *DNS server* to your *diab* LAN IP address
+2. Ensure your *network* DNS settings point to *diab*
+ - Open Android **Settings** > **Private DNS** > Select "**Private DNS provider hostname**"
+ - Enter *dns.yoursubdomain.yourdomain.com* (edit the DNS name as appropriate)
+ - Click **Save**
+3. If using *Chrome*, ensure it is also using *diab*
+ - Open Chrome **Settings** > **Privacy and security** > **Use secure DNS**
+ - Select **Chooose another provider**
+ - Enter *https://dns.yoursubdomain.yourdomain.com/dns-query* (edit the DNS name as appropriate)
+ 
+This will ensure your device, VPN *and* browser are using *diab*
