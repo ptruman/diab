@@ -150,6 +150,7 @@ So - let's run the above example through:
 * **DIAB_ENABLE_OUTBOUND_PRIVACY** - Set this to **1** to prevent *diab* passing EDNS info to any UPSTREAM DoH/DoT servers (default is **0**)
 * **DIAB_ALLOWED_EXTERNALLY** - Set this to a comma separated list of hostnames you want untrusted hosts to be able to resolve.  **One should be your WireGuard hostname** (i.e. *vpn.yoursubdomain.yourdomain.com*)
 * **DIAB_ENABLE_LOGGING** - Set this to **1** to enable textual messages in the Docker logs/stdout
+* **DIAB_LOG_EXTONLY** - Set this to **1** to only log queries from external queries in the Docker logs/stdout
 * **DIAB_ENABLE_ADVANCED_LOGGING** - Set this to **1** to enable verbose messaging from dnsdist itself
 * **DIAB_ENABLE_WEBSERVER** - Set this to **1** to enable the dnsdist webserver.  It will run on 0.0.0.0:8083
 * **DIAB_TRUSTED_LANS** - Set this to a comma separated list of netmasks you wish to allow, (i.e. *192.168.1.0/24,172.17.0.0/16*)
@@ -164,7 +165,7 @@ So - let's run the above example through:
 * **DIAB_FORCEREBUILD** - Set this to **1** if you want *diab* to rebuild configuration on every startup
 * **DIAB_MAX_QUEUE** - Set this to the number of queued queries you want to allow before *diab* fails to the next server (default is **10**) 
 * **DIAB_MAX_DROPS** - Set this to the number of dropped queries you want to allow before *diab* fails to the next server (default is **10**)
-* **DIAB_HEALTHCHECK** - Set this to **0** if you want diab to **not** run it's healtchecks (see *Known Issues* below)
+* **DIAB_HEALTHCHECK** - Set this to **0** if you want diab to **not** run it's healthchecks (see *Known Issues* below)
 * **DIAB_VERBOSE_HEALTH** - Set this to **1** if you want to see dedicated healthcheck output
 
 ## Network Requirements
