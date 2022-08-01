@@ -5,7 +5,7 @@ FROM bitnami/minideb:latest as dnsdistbuild
 # Baseline the image to latest default packages
 RUN apt update -y && apt upgrade -y
 # Make Dockerfile ARG driven
-ARG DIABVERSION=3.1
+ARG DIABVERSION=3.2
 ARG DNSDISTVERSION=1.7.2
 RUN echo $DIABVERSION > /tmp/diab_version.txt
 # Switch into /tmp
