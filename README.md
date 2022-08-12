@@ -353,7 +353,7 @@ If this becomes an issue, consider either:
 
 1. adding a direct DNS A/CNAME record to the IP of your diab host to bypass Traefik
 2. resolving the issues with the remote server to stop it failing
-3. running the container with DIAB_HEALTCHECK set to **0** which will stop healthchecks and report the container as healthy in all conditions
+3. running the container with DIAB_HEALTHCHECK set to **0** which will stop healthchecks and report the container as healthy in all conditions
 
 # What's next?
 
