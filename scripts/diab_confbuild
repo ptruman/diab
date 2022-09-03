@@ -466,13 +466,21 @@ AllowedGoogle:add("mtalk.google.com")
 --
 EOF
         # Check for allowed external hosts
-        echo "AllowedDomains=newDNSNameSet()" >> /etc/dnsdist/dnsdist.conf
+	
+	# Deprecating newDNSNameSet() for AllowedDomains
+        # echo "AllowedDomains=newDNSNameSet()" >> /etc/dnsdist/dnsdist.conf
+	# Adding newSuffixMatchNode for AllowedDomains
+	echo "AllowedDomains=newSuffixMatchNode()" >> newSuffixMatchNode
         if [ $DIAB_ALLOWED_EXTERNALLY ]; then
                 echo "# DIAB : INFO    : DIAB_ALLOWED_EXTERNALLY is set"
                 Working=`echo $DIAB_ALLOWED_EXTERNALLY | sed "s/ //g"`
                 for i in $(echo $Working | sed "s/,/ /g"); do
                         echo "# DIAB : INFO    : Adding $i to hostnames allowed for external hosts"
-                        echo "AllowedDomains:add(newDNSName(\"$i\"))" >> /etc/dnsdist/dnsdist.conf
+			
+			# Deprecating newDNSNameSet() for AllowedDomains
+                        # echo "AllowedDomains:add(newDNSName(\"$i\"))" >> /etc/dnsdist/dnsdist.conf
+			# Adding newSuffixMatchNode for AllowedDomains
+			echo "AllowedDomains:add(\"$i\")" >> /etc/dnsdist/dnsdist.conf
                 done
                 echo "--" >> /etc/dnsdist/dnsdist.conf
         fi
