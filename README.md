@@ -355,6 +355,14 @@ If this becomes an issue, consider either:
 2. resolving the issues with the remote server to stop it failing
 3. running the container with DIAB_HEALTHCHECK set to **0** which will stop healthchecks and report the container as healthy in all conditions
 
+## OMGWTFBBQ!
+
+When this project was originally published, Docker Hub was autobuilding images.  Now, on the free tier, images need to be manually pushed.  Whilst testing is
+carried out, it's not "full and formal" and sometimes an image gets pushed which contains errors - or, sometimes, the GitHub fixes are pushed and it takes a while
+before a rebuilt image is pushed.  
+
+If you have come here having pulled a Docker Hub image, and are having issues, try a manual source pull & build from Dockerfile.  If that still fails, get in touch! :)
+
 # What's next?
 
 Lates versions of diab will:
