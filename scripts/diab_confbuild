@@ -470,7 +470,7 @@ EOF
 	# Deprecating newDNSNameSet() for AllowedDomains
         # echo "AllowedDomains=newDNSNameSet()" >> /etc/dnsdist/dnsdist.conf
 	# Adding newSuffixMatchNode for AllowedDomains
-	echo "AllowedDomains=newSuffixMatchNode()" >> newSuffixMatchNode
+	echo "AllowedDomains=newSuffixMatchNode()" >> /etc/dnsdist/dnsdist.conf
         if [ $DIAB_ALLOWED_EXTERNALLY ]; then
                 echo "# DIAB : INFO    : DIAB_ALLOWED_EXTERNALLY is set"
                 Working=`echo $DIAB_ALLOWED_EXTERNALLY | sed "s/ //g"`
