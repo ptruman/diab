@@ -326,11 +326,16 @@ Device -> DoH Query 443 -> *diab* DoT port 443 -> Allow<br/>
 
 If needs be, the native dnsdist CLI can be accessed from the Docker Shell, by running *diab_cli*
 Typing *?* will show all commands available.
+The following (*case sensitive*) commands are useful within *diab_cli* :
+* _Logging=1_ : Enables console logging of all queries (internal and external) - use _Logging=0_ to disable
+* _LogExtOnly=1_ : Changes Logging so that only external queries are logged to console.  Use _LogExtOnly=0_ to disable
+* _quit_ : Quits *diab_cli*
 
-The following additional commands are available within the diab host shell:
+The following additional commands are available within the diab host shell (*not* diab_cli):
 * _diab_rescue_ : Downloads nano & ps utilities if you want to edit things "on the fly" in the image
-* _diab_forceup.sh_ : Forces all resolvers "up" 
-* _diab_enable_dnstap_ : Enables DNSTAP logging
+* _diab_flush_ : Forces diab to reset (empty) it's resolver cache - can be useful if you've had a bad lookup/issue  
+* _diab_forceup_ : Forces all resolvers "up" 
+* _diab_enable_dnstap_ : Enables DNSTAP logging (instructions will be displayed on how to access the log)
 * _diab_disable_dnstap_ : Disables DNSTAP logging
 
 # Known Issues
